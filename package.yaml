@@ -1,0 +1,16 @@
+name: personal-finance
+version: '0.1.0.0'
+synopsis: Some tools to manage my personal finance
+category: Finance
+author: Alexey Lebedeff
+maintainer: binarin@binarin.ru
+license: Apache-2.0
+homepage: https://github.com/binarin/personal-finance
+extra-source-files:
+- ChangeLog.md
+dependencies:
+- base >=4.9 && <4.10
+executables:
+  personal-finance:
+    main: Main.hs
+    source-dirs: src
