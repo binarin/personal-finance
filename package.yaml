@@ -13,6 +13,9 @@ dependencies:
   - threepenny-gui
   - process
   - extra
+  - temporary
+  - clay
+  - text
 default-extensions:
   - OverloadedStrings
 library:
