@@ -16,6 +16,15 @@ dependencies:
   - temporary
   - clay
   - text
+  - time
+  - containers
+  - bytestring
+  - mtl
+  - exceptions
+  - data-default
+  - lens
+  - managed
+  - directory
 default-extensions:
   - OverloadedStrings
 library:
