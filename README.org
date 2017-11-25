@@ -1,0 +1,5 @@
+* Live reloading with ghcid
+
+  #+BEGIN_SRC shell
+    ghcid -c 'cabal new-repl lib:personal-finance' --reload=./lib --reload=./src --reload=./static -T ':rr UI.live'
+  #+END_SRC

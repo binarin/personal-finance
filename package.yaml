@@ -11,6 +11,8 @@ extra-source-files:
 dependencies:
   - base >=4.9 && <4.10
   - threepenny-gui
+  - process
+  - extra
 default-extensions:
   - OverloadedStrings
 library:
