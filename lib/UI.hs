@@ -9,7 +9,7 @@ module UI where
 import           Data.Monoid (Last(..))
 import qualified Data.ByteString.Char8 as C8
 import           System.Exit (die)
-import           Control.Lens hiding ((#), set, element)
+import           Control.Lens hiding ((#), set, element, children)
 import           System.Environment (lookupEnv)
 import           Control.Monad.Managed
 import           Control.Monad.Catch
@@ -21,7 +21,6 @@ import qualified Graphics.UI.Threepenny.Core as UI
 import           Graphics.UI.Threepenny.Core hiding (Config)
 import           Graphics.UI.Threepenny.JQuery
 import qualified Graphics.UI.Threepenny.Widgets as UI
-import           System.IO (hClose)
 import           System.IO.Temp (withSystemTempFile, emptySystemTempFile)
 import           Data.Default
 import           System.Directory (removeFile)
@@ -101,6 +100,8 @@ setupApp :: RIO App ()
 setupApp = do
     injectCustomCss
     withWindowU $ set UI.title "Hello, World!!!!"
+    entry <- expenseEntry
+    setContent [entry]
     return ()
 
 withWindow :: (Window -> UI a) -> RIO App ()
@@ -112,6 +113,9 @@ withWindow ui = do
 withWindowU :: (UI Window -> UI a) -> RIO App ()
 withWindowU act = withWindow $ act . pure
 
+setContent :: [Element] -> RIO App ()
+setContent elts = do
+    withWindow $ \w -> getBody w & set children elts
 
 makeThreepennyConfig :: IO UI.Config
 makeThreepennyConfig = return defaultConfig { jsPort = Just 8024
@@ -119,3 +123,10 @@ makeThreepennyConfig = return defaultConfig { jsPort = Just 8024
                                 , jsWindowReloadOnDisconnect = True
                                 , jsCustomHTML = Just "index.html"
                                 }
+
+expenseEntry :: RIO App Element
+expenseEntry = do
+    liftUI $ do
+        amount <- UI.input
+        on UI.valueChange amount $ \val -> liftIO (putStrLn val)
+        column [pure amount]
