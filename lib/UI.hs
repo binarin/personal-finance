@@ -13,7 +13,7 @@ import           Control.Lens hiding ((#), set, element, children)
 import           System.Environment (lookupEnv)
 import           Control.Monad.Managed
 import           Control.Monad.Catch
-import           Control.Monad (void)
+import           Control.Monad (void, forM_)
 import           Control.Monad.IO.Class
 import           Control.Monad.Reader
 import qualified Graphics.UI.Threepenny as UI
@@ -128,5 +128,19 @@ expenseEntry :: RIO App Element
 expenseEntry = do
     liftUI $ do
         amount <- UI.input
+        (buttons, buttonClick) <- radioButtons [("a", 1), ("b", 2)]
         on UI.valueChange amount $ \val -> liftIO (putStrLn val)
-        column [pure amount]
+        onEvent buttonClick $ \val -> liftIO (putStrLn $ show val)
+        column [pure amount, pure buttons]
+
+radioButtons :: [(String, a)] -> UI (Element, Event a)
+radioButtons buttons = do
+    (event, handler) <- liftIO $ UI.newEvent
+    container <- UI.div # set UI.class_ "radio"
+    forM_ buttons $ \(label, value) -> do
+        button <- UI.button # set UI.text label
+        on UI.click button $ \() -> liftIO $ handler value
+        pure container #+ [pure button]
+        return ()
+
+    return (container, event)
