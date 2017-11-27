@@ -1,5 +1,6 @@
 * Live reloading with ghcid
 
   #+BEGIN_SRC shell
-    ghcid -c 'cabal new-repl lib:personal-finance' --reload=./lib --reload=./src --reload=./static -T ':rr UI.live'
+    TOSHL_URL="https://api.toshl.com" TOSHL_TOKEN="xxxxxxxx" \
+    ghcid -c 'cabal new-repl lib:personal-finance' --reload=./lib --reload=./src --reload=./static -T ':rr UILive.live'
   #+END_SRC

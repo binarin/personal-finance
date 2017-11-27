@@ -27,15 +27,11 @@ import           System.Directory (removeFile)
 
 import           Config
 import           UIStyle (writeCss)
+import RIO
 
 import qualified Service.Account as SvcAcc
 import qualified Impl.ToshlAccount as SvcAcc
 
-newtype RIO env a = RIO { unRIO :: ReaderT env IO a }
-  deriving (Functor,Applicative,Monad,MonadIO,MonadReader env)
-
-runRIO :: MonadIO m => env -> RIO env a -> m a
-runRIO env (RIO (ReaderT f)) = liftIO (f env)
 
 class HasWindow env where
     currentWindow :: env -> Window
@@ -72,8 +68,7 @@ main = do
         cssPath <- managed $ withTempPath "finance.css"
         liftIO $ writeCss cssPath
 
-        let svcAccount = SvcAcc.newHandle SvcAcc.Config { SvcAcc.url = (ourConfig^.toshlUrl)
-                                                        , SvcAcc.token = (ourConfig^.toshlToken) }
+        let svcAccount = SvcAcc.newHandle $ SvcAcc.Config (ourConfig^.toshlUrl) (ourConfig^.toshlToken)
         let env = Env ourConfig cssPath svcAccount
 
         liftIO $ startGUI tpConfig (setup env)

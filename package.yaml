@@ -25,6 +25,9 @@ dependencies:
   - lens
   - managed
   - directory
+  - aeson
+  - scientific
+  - wreq
 default-extensions:
   - OverloadedStrings
 library:

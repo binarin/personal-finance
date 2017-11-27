@@ -38,11 +38,15 @@ library
     , lens
     , managed
     , directory
+    , aeson
+    , scientific
+    , wreq
   exposed-modules:
       Config
       Core.Account
       Impl.ToshlAccount
       Lib.Prelude
+      RIO
       Service.Account
       UI
       UILive
@@ -73,6 +77,9 @@ executable personal-finance
     , lens
     , managed
     , directory
+    , aeson
+    , scientific
+    , wreq
     , personal-finance
   default-language: Haskell2010
 
@@ -99,6 +106,9 @@ test-suite spec
     , lens
     , managed
     , directory
+    , aeson
+    , scientific
+    , wreq
     , hspec
     , personal-finance
   default-language: Haskell2010
