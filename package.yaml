@@ -28,6 +28,7 @@ dependencies:
   - aeson
   - scientific
   - wreq
+  - lens-aeson
 default-extensions:
   - OverloadedStrings
 library:

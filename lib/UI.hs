@@ -6,6 +6,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 module UI where
 
+import Data.Time.Calendar (fromGregorian)
 import           Data.Monoid (Last(..))
 import qualified Data.ByteString.Char8 as C8
 import           System.Exit (die)
@@ -21,13 +22,14 @@ import qualified Graphics.UI.Threepenny.Core as UI
 import           Graphics.UI.Threepenny.Core hiding (Config)
 import           Graphics.UI.Threepenny.JQuery
 import qualified Graphics.UI.Threepenny.Widgets as UI
-import           System.IO.Temp (withSystemTempFile, emptySystemTempFile)
+import           System.IO.Temp (emptySystemTempFile)
 import           Data.Default
 import           System.Directory (removeFile)
 
 import           Config
 import           UIStyle (writeCss)
-import RIO
+import           RIO
+import           Core.Account
 
 import qualified Service.Account as SvcAcc
 import qualified Impl.ToshlAccount as SvcAcc
@@ -70,8 +72,13 @@ main = do
 
         let svcAccount = SvcAcc.newHandle $ SvcAcc.Config (ourConfig^.toshlUrl) (ourConfig^.toshlToken)
         let env = Env ourConfig cssPath svcAccount
+        liftIO $ SvcAcc.insertTransaction svcAccount sample
 
         liftIO $ startGUI tpConfig (setup env)
+
+sample :: Transaction
+sample = TrExpense $ Expense 1000 (Account "abn" "EUR") ("EUR") (Category "Еда и напитки" ExpenseCategory) Empty (fromGregorian 2017 12 03) Nothing
+
 
 withTempPath :: String -> (FilePath -> IO a) -> IO a
 withTempPath template action = bracket (emptySystemTempFile template) removeFile action

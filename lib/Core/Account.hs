@@ -20,7 +20,11 @@ makeFields ''Account
 data Tag = Tag { _tagName :: !Text }
 makeFields ''Tag
 
-data Category = Category { _tagName :: !Text }
+data CategoryType = ExpenseCategory | IncomeCategory | SystemCategory
+data Category = Category { _categoryName :: !Text
+                         , _categoryCatType :: !CategoryType
+                         }
+makeFields ''Category
 
 data Expense = Expense { _expenseAmount :: !Int
                        , _expenseAccount :: !Account
