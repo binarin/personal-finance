@@ -34,6 +34,10 @@ import           Core.Account
 import qualified Service.Account as SvcAcc
 import qualified Impl.ToshlAccount as SvcAcc
 
+import Service.Log (HasLogHandle(..), lInfo)
+import qualified Service.Log as SvcLog
+import qualified Impl.FastLogger as SvcLog
+
 
 class HasWindow env where
     currentWindow :: env -> Window
@@ -44,14 +48,21 @@ instance HasWindow env => MonadUI (RIO env) where
 data Env = Env { _envConfig :: Config
                , _envStylesheet :: FilePath
                , _envSvcAcc :: SvcAcc.Handle
+               , _envSvcLog :: SvcLog.Handle
                }
 makeFields ''Env
+
+instance HasLogHandle Env where
+    getLogHandle = _envSvcLog
 
 data App = App Env Window
 instance HasWindow App where
     currentWindow (App _ window) = window
 instance HasStylesheet App FilePath where
     stylesheet k (App env window) = fmap (\newS -> App (env & stylesheet .~ newS) window) (k (env^.stylesheet))
+
+instance HasLogHandle App where
+    getLogHandle (App env _) = getLogHandle env
 
 parseEnvConfig :: IO PartialConfig
 parseEnvConfig = do
@@ -70,10 +81,11 @@ main = do
         cssPath <- managed $ withTempPath "finance.css"
         liftIO $ writeCss cssPath
 
-        let svcAccount = SvcAcc.newHandle $ SvcAcc.Config (ourConfig^.toshlUrl) (ourConfig^.toshlToken)
-        let env = Env ourConfig cssPath svcAccount
-        liftIO $ SvcAcc.insertTransaction svcAccount sample
+        logHandle <- liftIO $ SvcLog.newHandle
+        let svcAccount = SvcAcc.newHandle $ SvcAcc.Config (ourConfig^.toshlUrl) (ourConfig^.toshlToken) logHandle
 
+        let env = Env ourConfig cssPath svcAccount logHandle
+        liftIO $ SvcAcc.insertTransaction svcAccount sample
         liftIO $ startGUI tpConfig (setup env)
 
 sample :: Transaction

@@ -34,15 +34,23 @@ import qualified Service.Account as Svc
 import           Core.Account as Acc
 import           RIO
 
+import Service.Log (HasLogHandle, lInfo)
+import qualified Service.Log as Log
+
 data Config = Config { _configUrl :: ByteString
                      , _configToken :: ByteString
+                     , _configLogger :: Log.Handle
                      }
 makeFields ''Config
 
 data IConfig = IConfig { _iConfigUrl :: ByteString
                        , _iConfigToken :: ByteString
+                       , _iConfigLogger :: Log.Handle
                        }
 makeFields ''IConfig
+
+instance HasLogHandle IConfig where
+    getLogHandle = _iConfigLogger
 
 newtype ToshlId name = ToshlId Text deriving (Generic)
 instance FromJSON (ToshlId a)
@@ -75,7 +83,7 @@ makeFields ''ToshlCategory
 newHandle :: Config -> Svc.Handle
 newHandle config = Svc.Handle { Svc.insertTransaction = runRIO iConfig . insertTransaction }
   where
-    iConfig = IConfig (config^.url) (config^.token)
+    iConfig = IConfig (config^.url) (config^.token) (config^.logger)
 
 insertTransaction :: Acc.Transaction -> RIO IConfig ()
 insertTransaction (TrExpense expense) = do
@@ -134,6 +142,7 @@ get method params = do
     baseUrl <- view url
     let fullUrl = B.concat [baseUrl, method]
     ourToken <- view token
+    lInfo fullUrl
     liftIO $ W.getWith (W.defaults & addAuth ourToken & addParams params) (C8.unpack fullUrl)
 
 post :: ToJSON a => Method -> [Param] -> a -> RIO IConfig (W.Response BL.ByteString)

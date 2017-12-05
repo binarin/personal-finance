@@ -29,6 +29,7 @@ dependencies:
   - scientific
   - wreq
   - lens-aeson
+  - fast-logger
 default-extensions:
   - OverloadedStrings
 library:
