@@ -81,7 +81,7 @@ main = do
         cssPath <- managed $ withTempPath "finance.css"
         liftIO $ writeCss cssPath
 
-        logHandle <- liftIO $ SvcLog.newHandle
+        logHandle <- managed $ SvcLog.withHandle
         let svcAccount = SvcAcc.newHandle $ SvcAcc.Config (ourConfig^.toshlUrl) (ourConfig^.toshlToken) logHandle
 
         let env = Env ourConfig cssPath svcAccount logHandle

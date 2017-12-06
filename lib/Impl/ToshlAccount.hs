@@ -12,13 +12,14 @@ module Impl.ToshlAccount
   , token
   ) where
 
-import           Data.Monoid
+import           Data.Either (isLeft)
+import           Data.Monoid hiding (getAll)
 import           Prelude hiding (id)
 import           GHC.Generics
 import           Data.Aeson as J
 import qualified Data.ByteString.Char8 as C8
 import           Control.Monad.IO.Class
-import Control.Monad (void)
+import           Control.Monad (void, when)
 import           Control.Lens
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as B
@@ -26,16 +27,20 @@ import qualified Data.ByteString.Lazy as BL
 import           Data.Scientific (Scientific, scientific)
 import           Data.Text (Text)
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as T
 import           Data.Time.Calendar (Day)
 import qualified Network.Wreq as W
-import Data.Time.Format (formatTime, defaultTimeLocale)
+import           Data.Time.Format (formatTime, defaultTimeLocale)
 
 import qualified Service.Account as Svc
 import           Core.Account as Acc
 import           RIO
 
-import Service.Log (HasLogHandle, lInfo)
+import           Service.Log (HasLogHandle, lInfo)
 import qualified Service.Log as Log
+
+
+import           Impl.ToshlAccount.HTTP
 
 data Config = Config { _configUrl :: ByteString
                      , _configToken :: ByteString
@@ -68,6 +73,13 @@ data ToshlCategory = ToshlCategory
     , _toshlCategoryCatType :: !CategoryType
     }
 
+data ToshlTag = ToshlTag
+    { _toshlTagId :: !(ToshlId ToshlTag)
+    , _toshlTagName :: !Text
+    , _toshlTagTagType :: !CategoryType
+    , _toshlTagPrimaryCategoryId :: !(ToshlId ToshlCategory)
+    }
+
 data CreateEntry = CreateEntry
     { _createEntryAmount :: !Scientific
     , _createEntryCurrencyCode :: !Text
@@ -79,6 +91,7 @@ data CreateEntry = CreateEntry
 makeFields ''CreateEntry
 makeFields ''ToshlAccount
 makeFields ''ToshlCategory
+makeFields ''ToshlTag
 
 newHandle :: Config -> Svc.Handle
 newHandle config = Svc.Handle { Svc.insertTransaction = runRIO iConfig . insertTransaction }
@@ -87,6 +100,8 @@ newHandle config = Svc.Handle { Svc.insertTransaction = runRIO iConfig . insertT
 
 insertTransaction :: Acc.Transaction -> RIO IConfig ()
 insertTransaction (TrExpense expense) = do
+    t :: [ToshlTag] <- getAll "/tags" []
+    fail "no way"
     reqBody <- serializeCreate expense
     liftIO $ putStrLn $ show $ (encode reqBody)
     void $ post "/entries" [] reqBody
@@ -134,8 +149,40 @@ instance FromJSON ToshlCategory where
                                                         "system" -> pure SystemCategory
                                                         cat -> fail $ "bad category: " <> T.unpack cat))
 
+
+parseCategoryType = withText "categoryType" (\case
+                                               "income" -> pure IncomeCategory
+                                               "expense" -> pure ExpenseCategory
+                                               "system" -> pure SystemCategory
+                                               cat -> fail $ "bad category: " <> T.unpack cat)
+
+instance FromJSON ToshlTag where
+    parseJSON = withObject "ToshlTag" $ \v -> ToshlTag
+      <$> v .: "id"
+      <*> v .: "name"
+      <*> (v .: "type" >>= parseCategoryType)
+      <*> v .: "category"
+
+
 type Method = ByteString
 type Param = (T.Text, [T.Text])
+
+getAll :: FromJSON a => Method -> [Param] -> RIO IConfig [a]
+getAll method params = do
+    baseUrl <- view url
+    lInfo $ "Getting head page at " <> baseUrl <> " " <> T.encodeUtf8 (T.pack $ show params)
+    first <- W.asJSON =<< get method params
+    let pagingStr = T.decodeUtf8 $ first ^. W.responseHeader "link"
+    paging <- either (fail . T.unpack) pure (parseToshlPaging pagingStr)
+    liftIO $ putStrLn $ show paging
+    rest <- case pageNext paging of
+              Nothing -> pure []
+              Just link -> do
+                  lInfo $ "Fetching next page " <> link
+                  getAll (T.encodeUtf8 link) []
+    let headItems = first ^. W.responseBody
+    lInfo $ show (length headItems) <> " items on head page, " <> show (length rest) <> " on remaining pages"
+    pure $ headItems ++ rest
 
 get :: Method -> [Param] -> RIO IConfig (W.Response BL.ByteString)
 get method params = do

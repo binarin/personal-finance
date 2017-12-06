@@ -30,6 +30,7 @@ dependencies:
   - wreq
   - lens-aeson
   - fast-logger
+  - parsec
 default-extensions:
   - OverloadedStrings
 library:
@@ -49,3 +50,4 @@ tests:
     dependencies:
       - hspec
       - personal-finance
+      - raw-strings-qq
