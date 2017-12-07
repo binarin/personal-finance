@@ -82,14 +82,14 @@ main = do
         liftIO $ writeCss cssPath
 
         logHandle <- managed $ SvcLog.withHandle
-        let svcAccount = SvcAcc.newHandle $ SvcAcc.Config (ourConfig^.toshlUrl) (ourConfig^.toshlToken) logHandle
+        svcAccount <- liftIO $ SvcAcc.newHandle $ SvcAcc.Config (ourConfig^.toshlUrl) (ourConfig^.toshlToken) logHandle
 
         let env = Env ourConfig cssPath svcAccount logHandle
         liftIO $ SvcAcc.insertTransaction svcAccount sample
         liftIO $ startGUI tpConfig (setup env)
 
 sample :: Transaction
-sample = TrExpense $ Expense 1000 (Account "abn" "EUR") ("EUR") (Category "Еда и напитки" ExpenseCategory) Empty (fromGregorian 2017 12 03) Nothing
+sample = TrExpense $ Expense 1000 (Account "abn" "EUR") ("EUR") (Category "Еда и напитки" ExpenseCategory) [Tag "binarin", Tag "marina"] (fromGregorian 2017 12 03) Nothing
 
 
 withTempPath :: String -> (FilePath -> IO a) -> IO a

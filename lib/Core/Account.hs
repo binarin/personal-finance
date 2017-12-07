@@ -16,24 +16,25 @@ data Account = Account { _accountName :: !Text
                        }
 makeFields ''Account
 
+data CategoryType = ExpenseCategory | IncomeCategory | SystemCategory deriving (Eq, Show)
 
 data Tag = Tag { _tagName :: !Text }
-makeFields ''Tag
 
-data CategoryType = ExpenseCategory | IncomeCategory | SystemCategory
 data Category = Category { _categoryName :: !Text
                          , _categoryCatType :: !CategoryType
                          }
-makeFields ''Category
 
 data Expense = Expense { _expenseAmount :: !Int
                        , _expenseAccount :: !Account
                        , _expenseCurrency :: !Text
                        , _expenseCategory :: !Category
-                       , _expenseTags :: !(Seq Tag)
+                       , _expenseTags :: ![Tag]
                        , _expenseDay :: Day
                        , _expenseDescription :: Maybe Text
                        }
-makeFields ''Expense
 
 data Transaction = TrExpense Expense
+
+makeFields ''Expense
+makeFields ''Category
+makeFields ''Tag
