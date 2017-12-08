@@ -1,3 +1,5 @@
+{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
@@ -13,6 +15,8 @@ module Impl.ToshlAccount
   , token
   ) where
 
+import           System.IO (IOMode(WriteMode), withFile, hPrint, hGetContents, readFile)
+import           System.Directory (doesFileExist)
 import           Control.Monad.STM (atomically)
 import           Control.Concurrent.STM.TVar (TVar, newTVar, writeTVar, readTVar)
 import           Control.Lens
@@ -60,7 +64,7 @@ data IConfig = IConfig { _iConfigUrl :: ByteString
 instance HasLogHandle IConfig where
     getLogHandle = _iConfigLogger
 
-newtype ToshlId name = ToshlId Text deriving (Generic)
+newtype ToshlId name = ToshlId Text deriving (Generic, Show, Read)
 instance FromJSON (ToshlId a)
 instance ToJSON (ToshlId a)
 
@@ -68,20 +72,20 @@ data ToshlAccount = ToshlAccount
     { _toshlAccountId :: !(ToshlId ToshlAccount)
     , _toshlAccountName :: !Text
     , _toshlAccountcurrencyCode :: !Text
-    }
+    } deriving (Show, Read)
 
 data ToshlCategory = ToshlCategory
     { _toshlCategoryId :: !(ToshlId ToshlCategory)
     , _toshlCategoryName :: !Text
     , _toshlCategoryCatType :: !CategoryType
-    }
+    } deriving (Show, Read)
 
 data ToshlTag = ToshlTag
     { _toshlTagId :: !(ToshlId ToshlTag)
     , _toshlTagName :: !Text
     , _toshlTagTagType :: !CategoryType
     , _toshlTagPrimaryCategoryId :: !(ToshlId ToshlCategory)
-    }
+    } deriving (Show, Read)
 
 data CreateEntry = CreateEntry
     { _createEntryAmount :: !Scientific
@@ -109,14 +113,32 @@ newHandle config = do
   runRIO iConfig $ populateCaches
   pure $ Svc.Handle { Svc.insertTransaction = runRIO iConfig . insertTransaction }
 
+prefetchAll :: (Read a, Show a, FromJSON a) => Method -> Lens' IConfig (TVar [a]) -> RIO IConfig ()
+prefetchAll method accessor = do
+    let filename = "." <> C8.unpack method -- XXX filter non-alphanumerics?
+    hasFile <- liftIO $ doesFileExist filename
+    items <- case hasFile of
+              True -> do
+                  lInfo $ "Loading cached " <> C8.unpack method <> " from " <> filename
+                  read <$> (liftIO $ readFile filename)
+              False -> do
+                  lInfo $ "Prefetching " <> method
+                  items <- getAll method []
+                  lInfo $ "Saving " <> show (length items) <> " items to cache " <> filename
+                  liftIO $ withFile filename WriteMode $ \handle -> do
+                      hPrint handle items
+                  pure items
+    lInfo $ C8.unpack method <> " has " <> show (length items) <> " items"
+    writeTVar <$> view accessor <*> pure items >>= liftIO . atomically
+
+
 populateCaches :: RIO IConfig ()
 populateCaches = do
     lInfo $ ("Populating caches" :: Text)
-    writeTVar <$> view accounts <*> getAll "/accounts" [] >>= liftIO . atomically
-    writeTVar <$> view categories <*> getAll "/categories" [] >>= liftIO . atomically
-    writeTVar <$> view tags <*> getAll "/tags" [] >>= liftIO . atomically
+    prefetchAll "/accounts" accounts
+    prefetchAll "/categories" categories
+    prefetchAll "/tags" tags
     pure ()
-
 
 insertTransaction :: Acc.Transaction -> RIO IConfig ()
 insertTransaction (TrExpense expense) = do
@@ -176,6 +198,7 @@ instance FromJSON ToshlCategory where
                                                         cat -> fail $ "bad category: " <> T.unpack cat))
 
 
+-- parseCategoryType :: Value -> Parser CategoryType
 parseCategoryType = withText "categoryType" (\case
                                                "income" -> pure IncomeCategory
                                                "expense" -> pure ExpenseCategory

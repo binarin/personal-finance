@@ -16,7 +16,7 @@ data Account = Account { _accountName :: !Text
                        }
 makeFields ''Account
 
-data CategoryType = ExpenseCategory | IncomeCategory | SystemCategory deriving (Eq, Show)
+data CategoryType = ExpenseCategory | IncomeCategory | SystemCategory deriving (Eq, Show, Read)
 
 data Tag = Tag { _tagName :: !Text }
 

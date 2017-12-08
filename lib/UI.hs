@@ -85,7 +85,7 @@ main = do
         svcAccount <- liftIO $ SvcAcc.newHandle $ SvcAcc.Config (ourConfig^.toshlUrl) (ourConfig^.toshlToken) logHandle
 
         let env = Env ourConfig cssPath svcAccount logHandle
-        liftIO $ SvcAcc.insertTransaction svcAccount sample
+        -- liftIO $ SvcAcc.insertTransaction svcAccount sample
         liftIO $ startGUI tpConfig (setup env)
 
 sample :: Transaction
@@ -138,14 +138,20 @@ makeThreepennyConfig = return defaultConfig { jsPort = Just 8024
                                 , jsCustomHTML = Just "index.html"
                                 }
 
+keypress :: Element -> Event Char
+keypress = fmap (toEnum . read . head . unsafeFromJSON) . domEvent "keypress"
+
 expenseEntry :: RIO App Element
 expenseEntry = do
     liftUI $ do
+        dateInput <- UI.input # set UI.type_ "date"
         amount <- UI.input
         (buttons, buttonClick) <- radioButtons [("a", 1), ("b", 2)]
         on UI.valueChange amount $ \val -> liftIO (putStrLn val)
         onEvent buttonClick $ \val -> liftIO (putStrLn $ show val)
-        column [pure amount, pure buttons]
+        container <- column [pure dateInput, pure amount, pure buttons]
+        on keypress container (\k -> liftIO (putStrLn $ show k))
+        pure container
 
 radioButtons :: [(String, a)] -> UI (Element, Event a)
 radioButtons buttons = do

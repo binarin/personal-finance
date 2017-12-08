@@ -1,3 +1,6 @@
 TAGS
 dist/
 dist-newstyle/
+/accounts
+/categories
+/tags
