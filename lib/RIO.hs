@@ -6,7 +6,7 @@ import Control.Monad.Reader
 import Control.Monad.Catch
 
 newtype RIO env a = RIO { unRIO :: ReaderT env IO a }
-  deriving (Functor,Applicative,Monad,MonadIO,MonadReader env, MonadThrow)
+  deriving (Functor,Applicative,Monad,MonadIO,MonadReader env, MonadThrow, MonadFix)
 
 runRIO :: MonadIO m => env -> RIO env a -> m a
 runRIO env (RIO (ReaderT f)) = liftIO (f env)

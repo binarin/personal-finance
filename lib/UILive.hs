@@ -7,7 +7,7 @@ import Control.Monad.Catch
 import System.Process (readProcess, callProcess)
 import Text.Read (readMaybe)
 
-import qualified UI
+import qualified GUI
 
 kickFirefox :: IO ()
 kickFirefox = do
@@ -27,4 +27,4 @@ live = do
   void $ forkIO $ do
       threadDelay 200000
       kickFirefox
-  UI.main
+  GUI.main

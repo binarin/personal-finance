@@ -20,7 +20,7 @@ extra-source-files:
 library
   hs-source-dirs:
       lib
-  default-extensions: OverloadedStrings
+  default-extensions: OverloadedStrings BangPatterns RankNTypes FlexibleContexts FlexibleInstances FunctionalDependencies MultiParamTypeClasses ScopedTypeVariables LambdaCase
   build-depends:
       base >=4.9 && <4.10
     , threepenny-gui
@@ -48,6 +48,7 @@ library
   exposed-modules:
       Config
       Core.Account
+      GUI
       Impl.FastLogger
       Impl.ToshlAccount
       Impl.ToshlAccount.HTTP
@@ -55,7 +56,6 @@ library
       RIO
       Service.Account
       Service.Log
-      UI
       UILive
       UIStyle
   other-modules:
@@ -66,7 +66,7 @@ executable personal-finance
   main-is: Main.hs
   hs-source-dirs:
       src
-  default-extensions: OverloadedStrings
+  default-extensions: OverloadedStrings BangPatterns RankNTypes FlexibleContexts FlexibleInstances FunctionalDependencies MultiParamTypeClasses ScopedTypeVariables LambdaCase
   build-depends:
       base >=4.9 && <4.10
     , threepenny-gui
@@ -99,7 +99,7 @@ test-suite spec
   main-is: Main.hs
   hs-source-dirs:
       test
-  default-extensions: OverloadedStrings
+  default-extensions: OverloadedStrings BangPatterns RankNTypes FlexibleContexts FlexibleInstances FunctionalDependencies MultiParamTypeClasses ScopedTypeVariables LambdaCase
   build-depends:
       base >=4.9 && <4.10
     , threepenny-gui

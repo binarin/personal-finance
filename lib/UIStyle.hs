@@ -11,6 +11,38 @@ css :: Text
 css = renderWith pretty [] stylesheet
 
 stylesheet :: Css
-stylesheet =
+stylesheet = do
+    reconcillation
+    date
     body ? do
-        background black
+        background grey
+
+date :: Css
+date = do
+    ".date" ? do
+        pure ()
+    ".date__prev" ? do
+       display inline
+    ".date__date" ? do
+       display inline
+    ".date__next" ? do
+       display inline
+
+
+reconcillation :: Css
+reconcillation = do
+    ".reconcillation" ? do
+        display grid
+        "grid-template-columns" -: "2fr 1fr 2fr"
+    ".reconcillation__toshl" ? do
+        "grid-row" -: "1 / span 2"
+        "grid-column" -: "1"
+    ".reconcillation__bank" ? do
+        "grid-row" -: "1 / span 2"
+        "grid-column" -: "3"
+    ".reconcillation__date" ? do
+        "grid-row" -: "1"
+        "grid-column" -: "2"
+    ".reconcillation__editor" ? do
+        "grid-row" -: "2"
+        "grid-column" -: "2"
