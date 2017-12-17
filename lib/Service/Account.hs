@@ -2,4 +2,8 @@ module Service.Account where
 
 import Core.Account as Acc
 
-data Handle = Handle { insertTransaction :: Acc.Transaction -> IO () }
+import Data.Time.Calendar (Day)
+
+data Handle = Handle { insertTransaction :: Acc.Transaction -> IO ()
+                     , getTransactions :: Account -> Day -> IO [Transaction]
+                     }

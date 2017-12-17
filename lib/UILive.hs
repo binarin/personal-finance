@@ -25,6 +25,6 @@ kickFirefox = do
 live :: IO ()
 live = do
   void $ forkIO $ do
-      threadDelay 200000
+      threadDelay 500000
       kickFirefox
   GUI.main

@@ -1,3 +1,4 @@
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE DeriveGeneric #-}
 module Impl.ToshlAccount
@@ -7,6 +8,7 @@ module Impl.ToshlAccount
   , token
   ) where
 
+import           Data.Maybe (fromMaybe)
 import           System.IO (IOMode(WriteMode), withFile, hPrint, hGetContents, readFile)
 import           System.Directory (doesFileExist)
 import           Control.Monad.STM (atomically)
@@ -20,7 +22,7 @@ import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as C8
 import qualified Data.ByteString.Lazy as BL
 import           Data.Monoid hiding (getAll)
-import           Data.Scientific (Scientific, scientific)
+import           Data.Scientific (Scientific, scientific, toBoundedInteger)
 import           Data.Sequence (Seq)
 import           Data.Text (Text)
 import qualified Data.Text as T
@@ -56,14 +58,18 @@ data IConfig = IConfig { _iConfigUrl :: ByteString
 instance HasLogHandle IConfig where
     getLogHandle = _iConfigLogger
 
-newtype ToshlId name = ToshlId Text deriving (Generic, Show, Read)
+newtype ToshlId name = ToshlId Text deriving (Generic, Show, Read, Eq)
 instance FromJSON (ToshlId a)
 instance ToJSON (ToshlId a)
+
+serializeId :: ToshlId a -> Text
+serializeId (ToshlId a) = a
+
 
 data ToshlAccount = ToshlAccount
     { _toshlAccountId :: !(ToshlId ToshlAccount)
     , _toshlAccountName :: !Text
-    , _toshlAccountcurrencyCode :: !Text
+    , _toshlAccountCurrencyCode :: !Text
     } deriving (Show, Read)
 
 data ToshlCategory = ToshlCategory
@@ -88,6 +94,17 @@ data CreateEntry = CreateEntry
     , _createEntryTags :: ![ToshlId ToshlTag]
     }
 
+data ToshlEntry = ToshlEntry
+    { _toshlEntryId :: !(ToshlId ToshlEntry)
+    , _toshlEntryAmount :: !Scientific
+    , _toshlEntryCurrencyCode :: !Text
+    , _toshlEntryDate :: !Day
+    , _toshlEntryDesc :: !(Maybe Text)
+    , _toshlEntryAccount :: !(ToshlId ToshlAccount)
+    , _toshlEntryCategory :: !(ToshlId ToshlCategory)
+    , _toshlEntryTags :: ![ToshlId ToshlTag]
+    }
+
 
 makeFields ''Config
 makeFields ''IConfig
@@ -95,6 +112,9 @@ makeFields ''CreateEntry
 makeFields ''ToshlAccount
 makeFields ''ToshlCategory
 makeFields ''ToshlTag
+makeFields ''ToshlEntry
+
+identity x = x
 
 newHandle :: Config -> IO Svc.Handle
 newHandle config = do
@@ -103,7 +123,52 @@ newHandle config = do
   tagsTVar <- atomically $ newTVar []
   let iConfig = IConfig (config^.url) (config^.token) (config^.logger) accountsTVar categoriesTVar tagsTVar
   runRIO iConfig $ populateCaches
-  pure $ Svc.Handle { Svc.insertTransaction = runRIO iConfig . insertTransaction }
+  pure $ Svc.Handle { Svc.insertTransaction = runRIO iConfig . insertTransaction
+                    , Svc.getTransactions = \a d -> runRIO iConfig $ getTransactions a d
+                    }
+
+getTransactions :: Account -> Day -> RIO IConfig [Transaction]
+getTransactions acc day = do
+    accountId <- resolveAccount acc
+    entries :: [ToshlEntry] <- getAll "/entries" [("from", [T.pack $ yyyyMmDd day])
+                                                 ,("to", [T.pack $ yyyyMmDd day])
+                                                 ,("account", [serializeId accountId])
+                                                 ]
+    mapM unpackTransaction entries
+
+unpackTransaction :: ToshlEntry -> RIO IConfig Transaction
+unpackTransaction tEntry = TrExpense <$> unpackExpense tEntry
+
+unpackExpense :: ToshlEntry -> RIO IConfig Expense
+unpackExpense entry = do
+    let _expenseAmount = fromMaybe 0 $ toBoundedInteger $ 100 * (entry^.amount)
+    _expenseAccount <- findAccount (entry^.account)
+    let _expenseCurrency = entry^.currencyCode
+    _expenseCategory <- findCategory (entry^.category)
+    _expenseTags <- mapM findTag (entry^.tags)
+    let _expenseDay = entry^.date
+    let _expenseDescription = entry^.desc
+    pure $ Expense {..}
+
+findCached :: Lens' IConfig (TVar [a]) -> (a -> Bool) -> (a -> b) -> RIO IConfig b
+findCached accessor predicate transformer = do
+    tvar <- view accessor
+    lst <- liftIO $ atomically $ readTVar tvar
+    case filter predicate lst of
+      it:_ -> pure $ transformer it
+      _ -> fail "No cached element"
+
+findTag :: ToshlId ToshlTag -> RIO IConfig Tag
+findTag needle = findCached tags (\it -> it^.id == needle) $ \ttag ->
+    Tag $ ttag^.name
+
+findCategory :: ToshlId ToshlCategory -> RIO IConfig Category
+findCategory needle = findCached categories (\it -> it^.id == needle) $ \tcat ->
+    Category (tcat^.name) (tcat^.catType)
+
+findAccount :: ToshlId ToshlAccount -> RIO IConfig Account
+findAccount needle = findCached accounts (\it -> it^.id == needle) $ \tacc ->
+    Account (tacc^.name) (tacc^.currencyCode)
 
 prefetchAll :: (Read a, Show a, FromJSON a) => Method -> Lens' IConfig (TVar [a]) -> RIO IConfig ()
 prefetchAll method accessor = do
@@ -204,6 +269,16 @@ instance FromJSON ToshlTag where
       <*> (v .: "type" >>= parseCategoryType)
       <*> v .: "category"
 
+instance FromJSON ToshlEntry where
+    parseJSON = withObject "ToshlEntry" $ \v -> ToshlEntry
+        <$> v .: "id"
+        <*> v .: "amount"
+        <*> ((v .: "currency") >>= (.: "code"))
+        <*> v .: "date"
+        <*> v .: "desc"
+        <*> v .: "account"
+        <*> v .: "category"
+        <*> (maybe [] identity <$> v .:? "tags")
 
 type Method = ByteString
 type Param = (T.Text, [T.Text])
@@ -212,7 +287,10 @@ getAll :: FromJSON a => Method -> [Param] -> RIO IConfig [a]
 getAll method params = do
     baseUrl <- view url
     lInfo $ "Getting head page at " <> baseUrl <> " " <> T.encodeUtf8 (T.pack $ show params)
-    first <- W.asJSON =<< get method params
+    firstRaw <- get method params
+    first <- case W.asJSON firstRaw of
+                 Left _ -> undefined
+                 Right it -> pure it
     let pagingStr = T.decodeUtf8 $ first ^. W.responseHeader "link"
     paging <- either (fail . T.unpack) pure (parseToshlPaging pagingStr)
     liftIO $ putStrLn $ show paging
@@ -268,3 +346,7 @@ instance ToJSON CreateEntry where
       where
         currencyObj = object [ "code" J..= (ce^.currencyCode)]
         yyyy_mm_dd = formatTime defaultTimeLocale "%Y-%m-%d" (ce^.date)
+
+
+yyyyMmDd :: Day -> String
+yyyyMmDd = formatTime defaultTimeLocale "%Y-%m-%d"

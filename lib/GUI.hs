@@ -72,6 +72,15 @@ instance HasStylesheet App FilePath where
 instance HasLogHandle App where
     getLogHandle (App env _) = getLogHandle env
 
+class HasAccHandle a where
+    getAccHandle :: a -> SvcAcc.Handle
+
+instance HasAccHandle Env where
+    getAccHandle env = env^.svcAcc
+
+instance HasAccHandle App where
+    getAccHandle (App env _) = getAccHandle env
+
 parseEnvConfig :: IO PartialConfig
 parseEnvConfig = do
     url <- lookupEnv "TOSHL_URL"
@@ -93,7 +102,8 @@ main = do
         svcAccount <- liftIO $ SvcAcc.newHandle $ SvcAcc.Config (ourConfig^.toshlUrl) (ourConfig^.toshlToken) logHandle
 
         let env = Env ourConfig cssPath svcAccount logHandle
-        -- liftIO $ SvcAcc.insertTransaction svcAccount sample
+        trns <- liftIO $ SvcAcc.getTransactions svcAccount (Account "abn" "EUR") (fromGregorian 2017 12 15)
+        liftIO $ putStrLn $ show trns
         liftIO $ startGUI tpConfig (setup env)
 
 sample :: Transaction
@@ -214,8 +224,23 @@ newDateWidget = do
     elt <- block "date" [("prev", prevBtn), ("date", entry'), ("next", nextBtn)]
     pure (elt, tidings dayBehaviour dayEvents)
 
+
+getTransactions :: Account -> Day -> RIO App [Transaction]
+getTransactions acc forDay = do
+    svc <- asks getAccHandle
+    liftIO $ SvcAcc.getTransactions svc acc forDay
+
 newToshlEntries :: Account -> Tidings Day -> RIO App Element
-newToshlEntries _acc _dayT = do
+newToshlEntries _acc dayT = do
+    initialDay <- liftIO $ currentValue (facts dayT)
+    trns <- getTransactions (Account "abn" "EUR") (pred initialDay)
+    let trnsB :: Behavior [Transaction] = pure trns
+        selectedB :: Behavior (Maybe Transaction) = pure $  case trns of
+                                                                [] -> Nothing
+                                                                (x:_) -> Just x
+        render trn = UI.string "toshl entries"
+        renderB = pure render
+    lb <- liftUI $ UI.listBox trnsB selectedB renderB
     liftUI $ UI.string "toshl entries"
 
 newBankEntries :: RIO App Element
