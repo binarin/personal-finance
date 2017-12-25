@@ -33,8 +33,38 @@ data Expense = Expense { _expenseAmount :: !Int
                        , _expenseDescription :: Maybe Text
                        } deriving (Show, Eq, Ord)
 
-data Transaction = TrExpense Expense deriving (Show, Eq, Ord)
+data Income = Income { _incomeAmount :: !Int
+                     , _incomeAccount :: !Account
+                     , _incomeCurrency :: !Text
+                     , _incomeCategory :: !Category
+                     , _incomeTags :: ![Tag]
+                     , _incomeDay :: Day
+                     , _incomeDescription :: Maybe Text
+                     } deriving (Show, Eq, Ord)
+
+
+data Transfer = Transfer { _transferAmount :: !Int
+                         , _transferFromAccount :: !Account
+                         , _transferToAccount :: !Account
+                         , _transferFromCurrency :: !Text
+                         , _transferToCurrency :: !Text
+                         , _transferTags :: ![Tag]
+                         , _transferDay :: Day
+                         , _transferDescription :: Maybe Text
+                         } deriving (Show, Eq, Ord)
+
+
+
+
+
+data Transaction = TrExpense Expense
+                 | TrIncome Income
+                 | TrTransfer Transfer
+  deriving (Show, Eq, Ord)
+
 
 makeFields ''Expense
+makeFields ''Income
+makeFields ''Transfer
 makeFields ''Category
 makeFields ''Tag

@@ -106,8 +106,8 @@ main = do
         svcAccount <- liftIO $ SvcAcc.newHandle $ SvcAcc.Config (ourConfig^.toshlUrl) (ourConfig^.toshlToken) logHandle
 
         let env = Env ourConfig cssPath svcAccount logHandle
-        trns <- liftIO $ SvcAcc.getTransactions svcAccount (Account "abn" "EUR") (fromGregorian 2017 12 15)
-        -- liftIO $ putStrLn $ show trns
+        trns <- liftIO $ SvcAcc.getTransactions svcAccount (Account "abn" "EUR") (fromGregorian 2017 12 20)
+        liftIO $ putStrLn $ show trns
         liftIO $ startGUI tpConfig (setup env)
 
 sample :: Transaction

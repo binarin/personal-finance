@@ -2,7 +2,7 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: f9216cbbf9654c80e996c98f8ec5a1d1ce8bf3cbb238cb754a640a97ed3ffa99
+-- hash: fef3a1d92d74ed279ae0ddb05d7e639a1af0b43e80d7295001c3f97d5a1e70d5
 
 name:                personal-finance
 version:             0.1.0.0
@@ -25,6 +25,7 @@ library
   default-extensions: OverloadedStrings BangPatterns RankNTypes FlexibleContexts FlexibleInstances FunctionalDependencies MultiParamTypeClasses ScopedTypeVariables LambdaCase
   build-depends:
       aeson
+    , aeson-pretty
     , base
     , bytestring
     , clay
@@ -77,6 +78,7 @@ executable personal-finance
   default-extensions: OverloadedStrings BangPatterns RankNTypes FlexibleContexts FlexibleInstances FunctionalDependencies MultiParamTypeClasses ScopedTypeVariables LambdaCase
   build-depends:
       aeson
+    , aeson-pretty
     , base
     , bytestring
     , clay
@@ -114,6 +116,7 @@ test-suite spec
   default-extensions: OverloadedStrings BangPatterns RankNTypes FlexibleContexts FlexibleInstances FunctionalDependencies MultiParamTypeClasses ScopedTypeVariables LambdaCase
   build-depends:
       aeson
+    , aeson-pretty
     , base
     , bytestring
     , clay

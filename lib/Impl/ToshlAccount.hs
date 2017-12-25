@@ -94,6 +94,12 @@ data CreateEntry = CreateEntry
     , _createEntryTags :: ![ToshlId ToshlTag]
     }
 
+data ToshlEntryTrn = ToshlEntryTrn
+  { _toshlEntryTrnId :: !(ToshlId ToshlEntryTrn)
+  , _toshlEntryTrnAccount :: !(ToshlId ToshlAccount)
+  , _toshlEntryTrnCurrencyCode :: !Text
+  } deriving (Eq)
+
 data ToshlEntry = ToshlEntry
     { _toshlEntryId :: !(ToshlId ToshlEntry)
     , _toshlEntryAmount :: !Scientific
@@ -101,10 +107,10 @@ data ToshlEntry = ToshlEntry
     , _toshlEntryDate :: !Day
     , _toshlEntryDesc :: !(Maybe Text)
     , _toshlEntryAccount :: !(ToshlId ToshlAccount)
-    , _toshlEntryCategory :: !(ToshlId ToshlCategory)
+    , _toshlEntryCategory :: !(Maybe (ToshlId ToshlCategory))
     , _toshlEntryTags :: ![ToshlId ToshlTag]
+    , _toshlEntryTransaction :: !(Maybe ToshlEntryTrn)
     }
-
 
 makeFields ''Config
 makeFields ''IConfig
@@ -113,6 +119,7 @@ makeFields ''ToshlAccount
 makeFields ''ToshlCategory
 makeFields ''ToshlTag
 makeFields ''ToshlEntry
+makeFields ''ToshlEntryTrn
 
 identity x = x
 
@@ -137,14 +144,48 @@ getTransactions acc day = do
     mapM unpackTransaction entries
 
 unpackTransaction :: ToshlEntry -> RIO IConfig Transaction
-unpackTransaction tEntry = TrExpense <$> unpackExpense tEntry
+unpackTransaction tEntry
+  | (tEntry^.transaction) /= Nothing = TrTransfer <$> unpackTransfer tEntry
+  | (tEntry^.amount) > 0 = TrIncome <$> unpackIncome tEntry
+  | otherwise = TrExpense <$> unpackExpense tEntry
+
+
+unpackTransfer :: ToshlEntry -> RIO IConfig Transfer
+unpackTransfer entry = do
+  let _transferAmount = fromMaybe 0 $ toBoundedInteger $ 100 * (entry^.amount)
+  _transferFromAccount <- findAccount (entry^.account)
+  trnInfo <- case entry^.transaction of
+    Nothing -> fail "unpackTransfer got entry without transaction"
+    Just it -> pure it
+  _transferToAccount <- findAccount (trnInfo^.account)
+  let _transferFromCurrency = entry^.currencyCode
+  let _transferToCurrency = trnInfo^.currencyCode
+  _transferTags <- mapM findTag (entry^.tags)
+  let _transferDay = entry^.date
+  let _transferDescription = entry^.desc
+  pure $ Transfer {..}
+
+unpackIncome :: ToshlEntry -> RIO IConfig Income
+unpackIncome entry = do
+  let _incomeAmount = fromMaybe 0 $ toBoundedInteger $ 100 * (entry^.amount)
+  _incomeAccount <- findAccount (entry^.account)
+  let _incomeCurrency = entry^.currencyCode
+  _incomeCategory <- case entry^.category of
+    Nothing -> fail "unpackIncome got entry without category" -- XXX pretty dump?
+    Just catId -> findCategory catId
+  _incomeTags <- mapM findTag (entry^.tags)
+  let _incomeDay = entry^.date
+  let _incomeDescription = entry^.desc
+  pure $ Income {..}
 
 unpackExpense :: ToshlEntry -> RIO IConfig Expense
 unpackExpense entry = do
     let _expenseAmount = fromMaybe 0 $ toBoundedInteger $ 100 * (entry^.amount)
     _expenseAccount <- findAccount (entry^.account)
     let _expenseCurrency = entry^.currencyCode
-    _expenseCategory <- findCategory (entry^.category)
+    _expenseCategory <- case entry^.category of
+      Nothing -> fail "unpackExpense got entry without category" -- XXX pretty dump?
+      Just catId -> findCategory catId
     _expenseTags <- mapM findTag (entry^.tags)
     let _expenseDay = entry^.date
     let _expenseDescription = entry^.desc
@@ -269,6 +310,13 @@ instance FromJSON ToshlTag where
       <*> (v .: "type" >>= parseCategoryType)
       <*> v .: "category"
 
+instance FromJSON ToshlEntryTrn where
+  parseJSON = withObject "ToshlEntryTrn" $ \v -> ToshlEntryTrn
+    <$> v .: "id"
+    <*> v .: "account"
+    <*> ((v .: "currency") >>= (.: "code"))
+
+
 instance FromJSON ToshlEntry where
     parseJSON = withObject "ToshlEntry" $ \v -> ToshlEntry
         <$> v .: "id"
@@ -277,8 +325,10 @@ instance FromJSON ToshlEntry where
         <*> v .: "date"
         <*> v .: "desc"
         <*> v .: "account"
-        <*> v .: "category"
+        <*> v .:? "category"
         <*> (maybe [] identity <$> v .:? "tags")
+        <*> v .:? "transaction"
+
 
 type Method = ByteString
 type Param = (T.Text, [T.Text])
@@ -287,10 +337,7 @@ getAll :: FromJSON a => Method -> [Param] -> RIO IConfig [a]
 getAll method params = do
     baseUrl <- view url
     logInfo $ "Getting head page at " <> T.decodeUtf8 baseUrl <> " " <> T.pack (show params)
-    firstRaw <- get method params
-    first <- case W.asJSON firstRaw of
-                 Left _ -> undefined
-                 Right it -> pure it
+    first <- W.asJSON =<< get method params
     let pagingStr = T.decodeUtf8 $ first ^. W.responseHeader "link"
     paging <- either (fail . T.unpack) pure (parseToshlPaging pagingStr)
     rest <- case pageNext paging of
