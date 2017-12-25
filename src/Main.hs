@@ -1,6 +1,6 @@
 module Main where
 
-import qualified UI
+import qualified GUI
 
 main :: IO ()
-main = UI.main
+main = GUI.main

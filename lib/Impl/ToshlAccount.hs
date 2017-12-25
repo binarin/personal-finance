@@ -37,7 +37,7 @@ import qualified Service.Account as Svc
 import           Core.Account as Acc
 import           RIO
 
-import           Service.Log (HasLogHandle, lInfo)
+import           Service.Log hiding (Handle)
 import qualified Service.Log as Log
 
 
@@ -176,22 +176,22 @@ prefetchAll method accessor = do
     hasFile <- liftIO $ doesFileExist filename
     items <- case hasFile of
               True -> do
-                  lInfo $ "Loading cached " <> C8.unpack method <> " from " <> filename
+                  logInfo $ "Loading cached " <> T.decodeUtf8 method <> " from " <> T.pack filename
                   read <$> (liftIO $ readFile filename)
               False -> do
-                  lInfo $ "Prefetching " <> method
+                  logInfo $ "Prefetching " <> T.decodeUtf8 method
                   items <- getAll method []
-                  lInfo $ "Saving " <> show (length items) <> " items to cache " <> filename
+                  logInfo $ "Saving " <> T.pack (show (length items)) <> " items to cache " <> T.pack filename
                   liftIO $ withFile filename WriteMode $ \handle -> do
                       hPrint handle items
                   pure items
-    lInfo $ C8.unpack method <> " has " <> show (length items) <> " items"
+    logInfo $ T.decodeUtf8 method <> " has " <> T.pack (show (length items)) <> " items"
     writeTVar <$> view accessor <*> pure items >>= liftIO . atomically
 
 
 populateCaches :: RIO IConfig ()
 populateCaches = do
-    lInfo $ ("Populating caches" :: Text)
+    logInfo "Populating caches"
     prefetchAll "/accounts" accounts
     prefetchAll "/categories" categories
     prefetchAll "/tags" tags
@@ -286,21 +286,20 @@ type Param = (T.Text, [T.Text])
 getAll :: FromJSON a => Method -> [Param] -> RIO IConfig [a]
 getAll method params = do
     baseUrl <- view url
-    lInfo $ "Getting head page at " <> baseUrl <> " " <> T.encodeUtf8 (T.pack $ show params)
+    logInfo $ "Getting head page at " <> T.decodeUtf8 baseUrl <> " " <> T.pack (show params)
     firstRaw <- get method params
     first <- case W.asJSON firstRaw of
                  Left _ -> undefined
                  Right it -> pure it
     let pagingStr = T.decodeUtf8 $ first ^. W.responseHeader "link"
     paging <- either (fail . T.unpack) pure (parseToshlPaging pagingStr)
-    liftIO $ putStrLn $ show paging
     rest <- case pageNext paging of
               Nothing -> pure []
               Just link -> do
-                  lInfo $ "Fetching next page " <> link
+                  logInfo $ "Fetching next page " <> link
                   getAll (T.encodeUtf8 link) []
     let headItems = first ^. W.responseBody
-    lInfo $ show (length headItems) <> " items on head page, " <> show (length rest) <> " on remaining pages"
+    logInfo $ T.pack (show (length headItems)) <> " items on head page, " <> T.pack (show (length rest)) <> " on remaining pages"
     pure $ headItems ++ rest
 
 get :: Method -> [Param] -> RIO IConfig (W.Response BL.ByteString)
@@ -308,7 +307,7 @@ get method params = do
     baseUrl <- view url
     let fullUrl = B.concat [baseUrl, method]
     ourToken <- view token
-    lInfo fullUrl
+    logInfo $ "GET " <> T.decodeUtf8 fullUrl <> T.pack (show params)
     liftIO $ W.getWith (W.defaults & addAuth ourToken & addParams params) (C8.unpack fullUrl)
 
 post :: ToJSON a => Method -> [Param] -> a -> RIO IConfig (W.Response BL.ByteString)

@@ -1,6 +1,8 @@
--- This file has been generated from package.yaml by hpack version 0.18.1.
+-- This file has been generated from package.yaml by hpack version 0.21.2.
 --
 -- see: https://github.com/sol/hpack
+--
+-- hash: f9216cbbf9654c80e996c98f8ec5a1d1ce8bf3cbb238cb754a640a97ed3ffa99
 
 name:                personal-finance
 version:             0.1.0.0
@@ -22,29 +24,33 @@ library
       lib
   default-extensions: OverloadedStrings BangPatterns RankNTypes FlexibleContexts FlexibleInstances FunctionalDependencies MultiParamTypeClasses ScopedTypeVariables LambdaCase
   build-depends:
-      base >=4.9 && <4.10
-    , threepenny-gui
-    , process
-    , extra
-    , temporary
-    , clay
-    , text
-    , time
-    , containers
+      aeson
+    , base
     , bytestring
-    , mtl
-    , exceptions
+    , clay
+    , containers
     , data-default
-    , lens
-    , managed
     , directory
-    , aeson
-    , scientific
-    , wreq
-    , lens-aeson
+    , exceptions
+    , extra
     , fast-logger
+    , lens
+    , lens-aeson
+    , managed
+    , monad-logger
+    , mtl
     , parsec
+    , prettyprinter
+    , prettyprinter-ansi-terminal
+    , process
+    , scientific
     , stm
+    , temporary
+    , terminal-size
+    , text
+    , threepenny-gui
+    , time
+    , wreq
   exposed-modules:
       Config
       Core.Account
@@ -64,34 +70,40 @@ library
 
 executable personal-finance
   main-is: Main.hs
+  other-modules:
+      Paths_personal_finance
   hs-source-dirs:
       src
   default-extensions: OverloadedStrings BangPatterns RankNTypes FlexibleContexts FlexibleInstances FunctionalDependencies MultiParamTypeClasses ScopedTypeVariables LambdaCase
   build-depends:
-      base >=4.9 && <4.10
-    , threepenny-gui
-    , process
-    , extra
-    , temporary
-    , clay
-    , text
-    , time
-    , containers
+      aeson
+    , base
     , bytestring
-    , mtl
-    , exceptions
+    , clay
+    , containers
     , data-default
-    , lens
-    , managed
     , directory
-    , aeson
-    , scientific
-    , wreq
-    , lens-aeson
+    , exceptions
+    , extra
     , fast-logger
+    , lens
+    , lens-aeson
+    , managed
+    , monad-logger
+    , mtl
     , parsec
-    , stm
     , personal-finance
+    , prettyprinter
+    , prettyprinter-ansi-terminal
+    , process
+    , scientific
+    , stm
+    , temporary
+    , terminal-size
+    , text
+    , threepenny-gui
+    , time
+    , wreq
   default-language: Haskell2010
 
 test-suite spec
@@ -101,32 +113,37 @@ test-suite spec
       test
   default-extensions: OverloadedStrings BangPatterns RankNTypes FlexibleContexts FlexibleInstances FunctionalDependencies MultiParamTypeClasses ScopedTypeVariables LambdaCase
   build-depends:
-      base >=4.9 && <4.10
-    , threepenny-gui
-    , process
-    , extra
-    , temporary
-    , clay
-    , text
-    , time
-    , containers
+      aeson
+    , base
     , bytestring
-    , mtl
-    , exceptions
+    , clay
+    , containers
     , data-default
-    , lens
-    , managed
     , directory
-    , aeson
-    , scientific
-    , wreq
-    , lens-aeson
+    , exceptions
+    , extra
     , fast-logger
-    , parsec
-    , stm
     , hspec
+    , lens
+    , lens-aeson
+    , managed
+    , monad-logger
+    , mtl
+    , parsec
     , personal-finance
+    , prettyprinter
+    , prettyprinter-ansi-terminal
+    , process
     , raw-strings-qq
+    , scientific
+    , stm
+    , temporary
+    , terminal-size
+    , text
+    , threepenny-gui
+    , time
+    , wreq
   other-modules:
       Impl.ToshlAccount.HTTPSpec
+      Paths_personal_finance
   default-language: Haskell2010

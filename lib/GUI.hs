@@ -7,7 +7,7 @@
 {-# LANGUAGE RecursiveDo #-}
 module GUI where
 
-
+import Data.Text (Text)
 import           Data.Time.Format (formatTime, parseTimeM, defaultTimeLocale)
 import           Data.Time.LocalTime (getZonedTime, zonedTimeToLocalTime, localDay)
 import           Data.Time.Calendar (Day)
@@ -42,7 +42,7 @@ import           Core.Account
 import qualified Service.Account as SvcAcc
 import qualified Impl.ToshlAccount as SvcAcc
 
-import           Service.Log (HasLogHandle(..), lInfo)
+import           Service.Log (HasLogHandle(..), logDebug)
 import qualified Service.Log as SvcLog
 import qualified Impl.FastLogger as SvcLog
 
@@ -99,11 +99,15 @@ main = do
         liftIO $ writeCss cssPath
 
         logHandle <- managed $ SvcLog.withHandle
+        liftIO $ runRIO logHandle $ do
+          logDebug $ ("test" :: Text)
+          pure ()
+
         svcAccount <- liftIO $ SvcAcc.newHandle $ SvcAcc.Config (ourConfig^.toshlUrl) (ourConfig^.toshlToken) logHandle
 
         let env = Env ourConfig cssPath svcAccount logHandle
         trns <- liftIO $ SvcAcc.getTransactions svcAccount (Account "abn" "EUR") (fromGregorian 2017 12 15)
-        liftIO $ putStrLn $ show trns
+        -- liftIO $ putStrLn $ show trns
         liftIO $ startGUI tpConfig (setup env)
 
 sample :: Transaction

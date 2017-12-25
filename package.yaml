@@ -9,7 +9,11 @@ homepage: https://github.com/binarin/personal-finance
 extra-source-files:
   - README.org
 dependencies:
-  - base >=4.9 && <4.10
+  - terminal-size
+  - base
+  - monad-logger
+  - prettyprinter
+  - prettyprinter-ansi-terminal
   - threepenny-gui
   - process
   - extra

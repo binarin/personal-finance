@@ -1,18 +1,24 @@
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE InstanceSigs #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+
 module Service.Log
   ( Handle(..)
   , HasLogHandle(..)
-  , lInfo
+  -- , lInfo
+  , module CS
   ) where
 
 import Control.Monad.IO.Class
 import Control.Monad.Reader.Class
-import System.Log.FastLogger (ToLogStr)
-
+import Control.Monad.Logger
+import Control.Monad.Logger.CallStack as CS
 import RIO
 
+type LogFun = forall msg. ToLogStr msg => Loc -> LogSource -> LogLevel -> msg -> IO ()
+
 data Handle =
-    Handle { _lInfo :: forall a. ToLogStr a => a -> IO ()
+    Handle { _loggerLog :: LogFun
            }
 
 class HasLogHandle a where
@@ -21,7 +27,8 @@ class HasLogHandle a where
 instance HasLogHandle Handle where
   getLogHandle = id
 
-lInfo :: (ToLogStr a, HasLogHandle env) => a -> RIO env ()
-lInfo str = do
-    logHandle <- asks getLogHandle
-    liftIO $ _lInfo logHandle str
+instance HasLogHandle env => MonadLogger (RIO env) where
+  monadLoggerLog loc src level msg = do
+    logFun <- asks $ _loggerLog . getLogHandle
+    liftIO $ logFun loc src level msg
+
