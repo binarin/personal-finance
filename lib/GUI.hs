@@ -7,7 +7,9 @@
 {-# LANGUAGE RecursiveDo #-}
 module GUI where
 
-import Data.Text (Text)
+import           Numeric (showFFloat)
+import           Data.Text (Text)
+import qualified Data.Text as T
 import           Data.Time.Format (formatTime, parseTimeM, defaultTimeLocale)
 import           Data.Time.LocalTime (getZonedTime, zonedTimeToLocalTime, localDay)
 import           Data.Time.Calendar (Day)
@@ -234,18 +236,57 @@ getTransactions acc forDay = do
     svc <- asks getAccHandle
     liftIO $ SvcAcc.getTransactions svc acc forDay
 
+
+formatExpenseAmount :: Int -> String
+formatExpenseAmount amt = showFFloat (Just 2) ((fromIntegral amt :: Double) / 100) ""
+
+formatCurrency :: Text -> String
+formatCurrency "EUR" = "€"
+formatCurrency "RUB" = "₽"
+formatCurrency other = T.unpack other
+
+showTransaction :: Transaction -> UI Element
+showTransaction (TrExpense exp) = liftUI $ do
+  amountElt <- UI.div #+ [UI.string $ formatExpenseAmount (- exp^.amount) <> " " <> formatCurrency (exp^.currency)]
+  categoryElt <- UI.div #+ [UI.string $ T.unpack $ exp^.category.name]
+  tagsElt <- UI.string "tags"
+  dayElt <- UI.string "2017-12-23"
+  descElts :: [(String, Element)] <- case exp^.description of
+    Nothing -> pure []
+    Just desc -> do
+      descElt <- UI.string $ T.unpack $ desc
+      pure [("description", descElt)]
+  block "expense" $ [("category", categoryElt)
+                    ,("amount", amountElt)
+                    ,("date", dayElt)
+                    ,("tags", tagsElt)
+                    ] ++ descElts
+showTransaction (TrIncome inc) = liftUI $ do
+  UI.string "not implemented - income"
+showTransaction (TrTransfer xfr) = liftUI $ do
+  UI.string "not implemented - transfer"
+
+
+
+childrenM :: WriteAttr Element [UI Element]
+childrenM = mkWriteAttr $ \i x -> void $ do
+    return x # set children [] #+ i
+
 newToshlEntries :: Account -> Tidings Day -> RIO App Element
 newToshlEntries _acc dayT = do
-    initialDay <- liftIO $ currentValue (facts dayT)
-    trns <- getTransactions (Account "abn" "EUR") (pred initialDay)
-    let trnsB :: Behavior [Transaction] = pure trns
-        selectedB :: Behavior (Maybe Transaction) = pure $  case trns of
-                                                                [] -> Nothing
-                                                                (x:_) -> Just x
-        render trn = UI.string "toshl entries"
-        renderB = pure render
-    lb <- liftUI $ UI.listBox trnsB selectedB renderB
-    liftUI $ UI.string "toshl entries"
+  initialDay <- liftIO $ currentValue (facts dayT)
+  trns <- getTransactions (Account "abn" "EUR") (pred (pred (pred initialDay)))
+  (modifyTrnsEv, modifyTrns) <- liftIO $ newEvent
+  trnsB <- liftIO $ accumB trns modifyTrnsEv
+  env <- ask
+  liftUI $ onEvent (rumors dayT) $ \newDay -> do
+    trns <- liftIO $ runRIO env $ getTransactions (Account "abn" "EUR") newDay
+    liftIO $ modifyTrns $ const trns
+    pure ()
+  liftUI $ do
+    container <- UI.div
+    element container # sink childrenM (map <$> pure showTransaction <*> trnsB)
+    pure container
 
 newBankEntries :: RIO App Element
 newBankEntries = do

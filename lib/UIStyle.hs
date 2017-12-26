@@ -14,8 +14,7 @@ stylesheet :: Css
 stylesheet = do
     reconcillation
     date
-    body ? do
-        background grey
+    expense
 
 date :: Css
 date = do
@@ -28,6 +27,22 @@ date = do
     ".date__next" ? do
        display inline
 
+expense :: Css
+expense = do
+  ".expense" ? do
+    paddingLeft (em 0.5)
+    margin (em 1) (em 1) (em 1) (em 1)
+    display grid
+    "grid-template-columns" -: "1fr 1fr"
+    borderBottom solid (px 3) (lighten 0.4 gray)
+    borderLeft solid (em 2) (lighten 0.4 gray)
+  ".expense__category" ? do
+    display inline
+  ".expense__amount" ? do
+    marginLeft auto
+    display inline
+    color red
+    fontWeight bold
 
 reconcillation :: Css
 reconcillation = do
