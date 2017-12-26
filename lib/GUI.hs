@@ -10,6 +10,7 @@ module GUI where
 import           Numeric (showFFloat)
 import           Data.Text (Text)
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as T
 import           Data.Time.Format (formatTime, parseTimeM, defaultTimeLocale)
 import           Data.Time.LocalTime (getZonedTime, zonedTimeToLocalTime, localDay)
 import           Data.Time.Calendar (Day)
@@ -35,6 +36,7 @@ import qualified Graphics.UI.Threepenny.Widgets as UI
 import           System.IO.Temp (emptySystemTempFile)
 import           Data.Default
 import           System.Directory (removeFile)
+import qualified Database.SQLite.Simple as SQL
 
 import           Config
 import           UIStyle (writeCss)
@@ -48,6 +50,9 @@ import           Service.Log (HasLogHandle(..), logDebug)
 import qualified Service.Log as SvcLog
 import qualified Impl.FastLogger as SvcLog
 
+import qualified Service.Bank as SvcBank
+import qualified Impl.BankSQLite as SvcBank
+
 
 class HasWindow env where
     currentWindow :: env -> Window
@@ -59,6 +64,7 @@ data Env = Env { _envConfig :: Config
                , _envStylesheet :: FilePath
                , _envSvcAcc :: SvcAcc.Handle
                , _envSvcLog :: SvcLog.Handle
+               , _envSvcBank :: SvcBank.Handle
                }
 makeFields ''Env
 
@@ -101,16 +107,17 @@ main = do
         liftIO $ writeCss cssPath
 
         logHandle <- managed $ SvcLog.withHandle
-        liftIO $ runRIO logHandle $ do
-          logDebug $ ("test" :: Text)
-          pure ()
+        let jsLogProxy :: C8.ByteString -> IO ()
+            jsLogProxy bs = SvcLog._loggerLog logHandle SvcLog.defaultLoc "TP" SvcLog.LevelInfo bs
 
         svcAccount <- liftIO $ SvcAcc.newHandle $ SvcAcc.Config (ourConfig^.toshlUrl) (ourConfig^.toshlToken) logHandle
 
-        let env = Env ourConfig cssPath svcAccount logHandle
+        sqliteConn <- managed $ SQL.withConnection "db.sqlite"
+        svcBank <- liftIO $ SvcBank.newHandle logHandle sqliteConn
+
+        let env = Env ourConfig cssPath svcAccount logHandle svcBank
         trns <- liftIO $ SvcAcc.getTransactions svcAccount (Account "abn" "EUR") (fromGregorian 2017 12 20)
-        liftIO $ putStrLn $ show trns
-        liftIO $ startGUI tpConfig (setup env)
+        liftIO $ startGUI (tpConfig { jsLog = jsLogProxy }) (setup env)
 
 sample :: Transaction
 sample = TrExpense $ Expense 1000 (Account "abn" "EUR") ("EUR") (Category "Еда и напитки" ExpenseCategory) [Tag "binarin", Tag "marina"] (fromGregorian 2017 12 03) Nothing

@@ -2,7 +2,7 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: fef3a1d92d74ed279ae0ddb05d7e639a1af0b43e80d7295001c3f97d5a1e70d5
+-- hash: 3bb729f8b632b506284c2e057effb79d818af93c38762903820a1d46c60509f7
 
 name:                personal-finance
 version:             0.1.0.0
@@ -28,8 +28,10 @@ library
     , aeson-pretty
     , base
     , bytestring
+    , cassava
     , clay
     , containers
+    , cryptonite
     , data-default
     , directory
     , exceptions
@@ -44,7 +46,9 @@ library
     , prettyprinter
     , prettyprinter-ansi-terminal
     , process
+    , raw-strings-qq
     , scientific
+    , sqlite-simple
     , stm
     , temporary
     , terminal-size
@@ -55,13 +59,17 @@ library
   exposed-modules:
       Config
       Core.Account
+      Core.Bank
       GUI
+      Impl.BankSQLite
       Impl.FastLogger
       Impl.ToshlAccount
       Impl.ToshlAccount.HTTP
       Lib.Prelude
+      Parser.ABNTab
       RIO
       Service.Account
+      Service.Bank
       Service.Log
       UILive
       UIStyle
@@ -81,8 +89,10 @@ executable personal-finance
     , aeson-pretty
     , base
     , bytestring
+    , cassava
     , clay
     , containers
+    , cryptonite
     , data-default
     , directory
     , exceptions
@@ -98,7 +108,9 @@ executable personal-finance
     , prettyprinter
     , prettyprinter-ansi-terminal
     , process
+    , raw-strings-qq
     , scientific
+    , sqlite-simple
     , stm
     , temporary
     , terminal-size
@@ -119,8 +131,10 @@ test-suite spec
     , aeson-pretty
     , base
     , bytestring
+    , cassava
     , clay
     , containers
+    , cryptonite
     , data-default
     , directory
     , exceptions
@@ -139,6 +153,7 @@ test-suite spec
     , process
     , raw-strings-qq
     , scientific
+    , sqlite-simple
     , stm
     , temporary
     , terminal-size

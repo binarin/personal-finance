@@ -9,6 +9,10 @@ homepage: https://github.com/binarin/personal-finance
 extra-source-files:
   - README.org
 dependencies:
+  - cryptonite
+  - raw-strings-qq
+  - sqlite-simple
+  - cassava
   - aeson-pretty
   - terminal-size
   - base
@@ -64,4 +68,3 @@ tests:
     dependencies:
       - hspec
       - personal-finance
-      - raw-strings-qq

@@ -8,7 +8,6 @@ module Core.Account where
 
 import Data.Text (Text)
 import Data.Time.Calendar (Day)
-import Data.Sequence (Seq)
 import Control.Lens
 
 data Account = Account { _accountName :: !Text
@@ -52,10 +51,6 @@ data Transfer = Transfer { _transferAmount :: !Int
                          , _transferDay :: Day
                          , _transferDescription :: Maybe Text
                          } deriving (Show, Eq, Ord)
-
-
-
-
 
 data Transaction = TrExpense Expense
                  | TrIncome Income
