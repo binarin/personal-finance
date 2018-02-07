@@ -15,6 +15,8 @@ stylesheet = do
     reconcillation
     date
     expense
+    income
+    transfer
 
 date :: Css
 date = do
@@ -27,15 +29,19 @@ date = do
     ".date__next" ? do
        display inline
 
+transactionDetails :: Css
+transactionDetails = do
+  paddingLeft (em 0.5)
+  margin (em 1) (em 1) (em 1) (em 1)
+  display grid
+  "grid-template-columns" -: "1fr 1fr"
+  borderBottom solid (px 3) (lighten 0.4 gray)
+  borderLeft solid (em 2) (lighten 0.4 gray)
+
 expense :: Css
 expense = do
   ".expense" ? do
-    paddingLeft (em 0.5)
-    margin (em 1) (em 1) (em 1) (em 1)
-    display grid
-    "grid-template-columns" -: "1fr 1fr"
-    borderBottom solid (px 3) (lighten 0.4 gray)
-    borderLeft solid (em 2) (lighten 0.4 gray)
+    transactionDetails
   ".expense__category" ? do
     display inline
   ".expense__amount" ? do
@@ -43,6 +49,32 @@ expense = do
     display inline
     color red
     fontWeight bold
+
+income :: Css
+income = do
+  ".income" ? do
+    transactionDetails
+  ".income__category" ? do
+    display inline
+  ".income__amount" ? do
+    marginLeft auto
+    display inline
+    color green
+    fontWeight bold
+
+transfer :: Css
+transfer = do
+  ".transfer" ? do
+    transactionDetails
+  ".transfer__category" ? do
+    display inline
+  ".transfer__amount" ? do
+    marginLeft auto
+    display inline
+    color grey
+    fontWeight bold
+
+
 
 reconcillation :: Css
 reconcillation = do

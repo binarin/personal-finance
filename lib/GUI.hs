@@ -116,7 +116,6 @@ main = do
         svcBank <- liftIO $ SvcBank.newHandle logHandle sqliteConn
 
         let env = Env ourConfig cssPath svcAccount logHandle svcBank
-        trns <- liftIO $ SvcAcc.getTransactions svcAccount (Account "abn" "EUR") (fromGregorian 2017 12 20)
         liftIO $ startGUI (tpConfig { jsLog = jsLogProxy }) (setup env)
 
 sample :: Transaction
@@ -252,27 +251,62 @@ formatCurrency "EUR" = "€"
 formatCurrency "RUB" = "₽"
 formatCurrency other = T.unpack other
 
-showTransaction :: Transaction -> UI Element
-showTransaction (TrExpense exp) = liftUI $ do
-  amountElt <- UI.div #+ [UI.string $ formatExpenseAmount (- exp^.amount) <> " " <> formatCurrency (exp^.currency)]
-  categoryElt <- UI.div #+ [UI.string $ T.unpack $ exp^.category.name]
-  tagsElt <- UI.string "tags"
-  dayElt <- UI.string "2017-12-23"
-  descElts :: [(String, Element)] <- case exp^.description of
+
+makeAmountElement amount currency = UI.div #+ [UI.string $ formatExpenseAmount amount <> " " <> formatCurrency currency]
+
+trnAmountElt :: Transaction -> UI Element
+trnAmountElt (TrExpense exp) = makeAmountElement (- exp^.amount) (exp^.currency)
+trnAmountElt (TrIncome inc) = makeAmountElement (inc^.amount) (inc^.currency)
+trnAmountElt (TrTransfer xfr) = makeAmountElement (xfr^.amount) (xfr^.fromCurrency)
+
+divWithText :: Text -> UI Element
+divWithText txt = UI.string $ T.unpack $ txt
+
+trnCategoryElt :: Transaction -> UI Element
+trnCategoryElt (TrExpense exp) = divWithText (exp^.category.name)
+trnCategoryElt (TrIncome inc) = divWithText (inc^.category.name)
+trnCategoryElt (TrTransfer xfr) = divWithText ("-> " <> xfr^.toAccount.name)
+
+divWithDate :: Day -> UI Element
+divWithDate day = UI.string $ yyyy_mm_dd day
+
+trnDateElt :: Transaction -> UI Element
+trnDateElt (TrExpense exp) = divWithDate (exp^.day)
+trnDateElt (TrIncome inc) = divWithDate (inc^.day)
+trnDateElt (TrTransfer xfr) = divWithDate (xfr^.day)
+
+trnTagsElt :: Transaction -> UI Element
+trnTagsElt _ = UI.string "tags"
+
+trnDescElts :: Transaction -> UI [(String, Element)]
+trnDescElts trn = case description of
     Nothing -> pure []
     Just desc -> do
       descElt <- UI.string $ T.unpack $ desc
       pure [("description", descElt)]
-  block "expense" $ [("category", categoryElt)
-                    ,("amount", amountElt)
-                    ,("date", dayElt)
-                    ,("tags", tagsElt)
-                    ] ++ descElts
-showTransaction (TrIncome inc) = liftUI $ do
-  UI.string "not implemented - income"
-showTransaction (TrTransfer xfr) = liftUI $ do
-  UI.string "not implemented - transfer"
+  where
+    description = Just "lol"
+    -- (TrExpense exp) = (exp^.description)
+      -- TrIncome inc -> (inc^.description)
+      -- TrTransfer xfr -> (xfr^.description)
 
+showTransaction :: Transaction -> UI Element
+showTransaction trn = liftUI $ do
+    amountElt <- trnAmountElt trn
+    categoryElt <- trnCategoryElt trn
+    dayElt <- trnDateElt trn
+    tagsElt <- trnTagsElt trn
+    descElts <- trnDescElts trn
+    block blockName $ [("category", categoryElt)
+                      ,("amount", amountElt)
+                      ,("date", dayElt)
+                      ,("tags", tagsElt)
+                      ] ++ descElts
+  where
+    blockName = case trn of
+      TrExpense _ -> "expense"
+      TrIncome _ -> "income"
+      TrTransfer _ -> "transfer"
 
 
 childrenM :: WriteAttr Element [UI Element]
