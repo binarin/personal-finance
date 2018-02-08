@@ -316,7 +316,7 @@ childrenM = mkWriteAttr $ \i x -> void $ do
 newToshlEntries :: Account -> Tidings Day -> RIO App Element
 newToshlEntries _acc dayT = do
   initialDay <- liftIO $ currentValue (facts dayT)
-  trns <- getTransactions (Account "abn" "EUR") (pred (pred (pred initialDay)))
+  trns <- getTransactions (Account "abn" "EUR") initialDay
   (modifyTrnsEv, modifyTrns) <- liftIO $ newEvent
   trnsB <- liftIO $ accumB trns modifyTrnsEv
   env <- ask

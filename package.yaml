@@ -9,38 +9,39 @@ homepage: https://github.com/binarin/personal-finance
 extra-source-files:
   - README.org
 dependencies:
-  - cryptonite
-  - raw-strings-qq
-  - sqlite-simple
-  - cassava
+  - aeson
   - aeson-pretty
-  - terminal-size
   - base
+  - bytestring
+  - cassava
+  - clay
+  - containers
+  - cryptonite
+  - data-default
+  - directory
+  - exceptions
+  - extra
+  - fast-logger
+  - lens
+  - lens-aeson
+  - managed
   - monad-logger
+  - mtl
+  - parsec
   - prettyprinter
   - prettyprinter-ansi-terminal
-  - threepenny-gui
   - process
-  - extra
-  - temporary
-  - clay
-  - text
-  - time
-  - containers
-  - bytestring
-  - mtl
-  - exceptions
-  - data-default
-  - lens
-  - managed
-  - directory
-  - aeson
+  - raw-strings-qq
   - scientific
-  - wreq
-  - lens-aeson
-  - fast-logger
-  - parsec
+  - sqlite-simple
   - stm
+  - temporary
+  - terminal-size
+  - text
+  - threepenny-gui
+  - time
+  - vector
+  - wreq
 default-extensions:
   - OverloadedStrings
   - BangPatterns

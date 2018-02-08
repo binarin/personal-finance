@@ -2,7 +2,7 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 3bb729f8b632b506284c2e057effb79d818af93c38762903820a1d46c60509f7
+-- hash: 68b1e904958ab612892bfa2d995d139d50a55e091d5c30a33b741a7023aa0013
 
 name:                personal-finance
 version:             0.1.0.0
@@ -55,6 +55,7 @@ library
     , text
     , threepenny-gui
     , time
+    , vector
     , wreq
   exposed-modules:
       Config
@@ -117,6 +118,7 @@ executable personal-finance
     , text
     , threepenny-gui
     , time
+    , vector
     , wreq
   default-language: Haskell2010
 
@@ -160,6 +162,7 @@ test-suite spec
     , text
     , threepenny-gui
     , time
+    , vector
     , wreq
   other-modules:
       Impl.ToshlAccount.HTTPSpec
