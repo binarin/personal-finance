@@ -18,6 +18,7 @@ type StatementText = ByteString
 
 data Handle = Handle
   { _saveStatement :: SaveStatementFun
+  , _getTransactions :: forall m. MonadIO m => Day -> m [BankTrn]
   }
 
 data ParsedBankRow = ParsedBankRow

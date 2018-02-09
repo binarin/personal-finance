@@ -7,6 +7,7 @@
 {-# LANGUAGE RecursiveDo #-}
 module GUI where
 
+import           System.Posix.Env (getEnvDefault)
 import           Numeric (showFFloat)
 import           Data.Text (Text)
 import qualified Data.Text as T
@@ -51,7 +52,7 @@ import qualified Service.Log as SvcLog
 import qualified Impl.FastLogger as SvcLog
 
 import qualified Service.Bank as SvcBank
-import qualified Impl.BankSQLite as SvcBank
+import qualified Impl.BankABNText as SvcBank
 
 
 class HasWindow env where
@@ -113,7 +114,8 @@ main = do
         svcAccount <- liftIO $ SvcAcc.newHandle $ SvcAcc.Config (ourConfig^.toshlUrl) (ourConfig^.toshlToken) logHandle
 
         sqliteConn <- managed $ SQL.withConnection "db.sqlite"
-        svcBank <- liftIO $ SvcBank.newHandle logHandle sqliteConn
+        homeDir <- liftIO $ getEnvDefault "HOME" "/home/binarin"
+        svcBank <- liftIO $ SvcBank.newHandle logHandle (homeDir <> "/Downloads")
 
         let env = Env ourConfig cssPath svcAccount logHandle svcBank
         liftIO $ startGUI (tpConfig { jsLog = jsLogProxy }) (setup env)

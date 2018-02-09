@@ -20,8 +20,8 @@ data BankStatement = BankStatement
 
 data BankTrn = BankTrn
   { _bankTrnId :: !(DBId BankTrn)
-  , _bankTrnStatement :: !BankStatement
-  , _bankTrnRowNumber :: !Int
+--  , _bankTrnStatement :: !BankStatement
+--  , _bankTrnRowNumber :: !Int
   , _bankTrnAmount :: !Int
   , _bankTrnCurrency :: !(Maybe Text)
   , _bankTrnDay :: !Day

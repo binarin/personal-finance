@@ -2,7 +2,7 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 68b1e904958ab612892bfa2d995d139d50a55e091d5c30a33b741a7023aa0013
+-- hash: c2d9e831f1b7c91208ae445281c3daf4db2aceae5e8376daa6825408b30ccbe7
 
 name:                personal-finance
 version:             0.1.0.0
@@ -47,6 +47,7 @@ library
     , prettyprinter-ansi-terminal
     , process
     , raw-strings-qq
+    , regex-posix
     , scientific
     , sqlite-simple
     , stm
@@ -55,6 +56,7 @@ library
     , text
     , threepenny-gui
     , time
+    , unix
     , vector
     , wreq
   exposed-modules:
@@ -62,7 +64,7 @@ library
       Core.Account
       Core.Bank
       GUI
-      Impl.BankSQLite
+      Impl.BankABNText
       Impl.FastLogger
       Impl.ToshlAccount
       Impl.ToshlAccount.HTTP
@@ -110,6 +112,7 @@ executable personal-finance
     , prettyprinter-ansi-terminal
     , process
     , raw-strings-qq
+    , regex-posix
     , scientific
     , sqlite-simple
     , stm
@@ -118,6 +121,7 @@ executable personal-finance
     , text
     , threepenny-gui
     , time
+    , unix
     , vector
     , wreq
   default-language: Haskell2010
@@ -154,6 +158,7 @@ test-suite spec
     , prettyprinter-ansi-terminal
     , process
     , raw-strings-qq
+    , regex-posix
     , scientific
     , sqlite-simple
     , stm
@@ -162,6 +167,7 @@ test-suite spec
     , text
     , threepenny-gui
     , time
+    , unix
     , vector
     , wreq
   other-modules:
