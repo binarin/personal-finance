@@ -1,3 +1,4 @@
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -277,20 +278,28 @@ trnDateElt (TrExpense exp) = divWithDate (exp^.day)
 trnDateElt (TrIncome inc) = divWithDate (inc^.day)
 trnDateElt (TrTransfer xfr) = divWithDate (xfr^.day)
 
+getTransactionTags :: Transaction -> [Tag]
+getTransactionTags (TrExpense exp) = exp^.tags
+getTransactionTags (TrIncome inc) = inc^.tags
+getTransactionTags (TrTransfer xfr) = xfr^.tags
+
 trnTagsElt :: Transaction -> UI Element
-trnTagsElt _ = UI.string "tags"
+trnTagsElt trn = do
+  tagElements <- mapM (\x -> UI.string $ T.unpack $ x^.name) (getTransactionTags trn)
+  block "tags" (map ("tag",) tagElements)
 
 trnDescElts :: Transaction -> UI [(String, Element)]
-trnDescElts trn = case description of
+trnDescElts trn = case trnDesc of
     Nothing -> pure []
     Just desc -> do
       descElt <- UI.string $ T.unpack $ desc
       pure [("description", descElt)]
   where
-    description = Just "lol"
-    -- (TrExpense exp) = (exp^.description)
-      -- TrIncome inc -> (inc^.description)
-      -- TrTransfer xfr -> (xfr^.description)
+    trnDesc :: Maybe Text
+    trnDesc = case trn of
+      TrExpense expense -> expense^.description
+      TrIncome inc -> inc^.description
+      TrTransfer xfr -> xfr^.description
 
 showTransaction :: Transaction -> UI Element
 showTransaction trn = liftUI $ do

@@ -17,6 +17,7 @@ stylesheet = do
     expense
     income
     transfer
+    tags
 
 date :: Css
 date = do
@@ -43,6 +44,8 @@ expense = do
   ".expense" ? do
     transactionDetails
   ".expense__category" ? do
+    display inline
+  ".expense__tags" ? do
     display inline
   ".expense__amount" ? do
     marginLeft auto
@@ -93,3 +96,14 @@ reconcillation = do
     ".reconcillation__editor" ? do
         "grid-row" -: "2"
         "grid-column" -: "2"
+
+tags :: Css
+tags = do
+  ".tags" ? do
+    display inline
+  ".tags__tag" ? do
+    display inlineBlock
+    backgroundColor (lighten 0.4 gray)
+    borderRadius (px 4) (px 4) (px 4) (px 4)
+    margin (px 4) (px 4) (px 4) (px 4)
+    padding (px 4) (px 4) (px 4) (px 4)
