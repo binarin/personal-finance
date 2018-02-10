@@ -2,7 +2,7 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: c2d9e831f1b7c91208ae445281c3daf4db2aceae5e8376daa6825408b30ccbe7
+-- hash: e06711003c7bf18ebac17ec9d35c74e86a190c946403da6dd769d296635b413a
 
 name:                personal-finance
 version:             0.1.0.0
@@ -60,6 +60,7 @@ library
     , vector
     , wreq
   exposed-modules:
+      Common
       Config
       Core.Account
       Core.Bank
@@ -74,7 +75,11 @@ library
       Service.Account
       Service.Bank
       Service.Log
+      UI.BankTransactions
+      UI.BankTransactionsCSS
+      UICommon
       UILive
+      UIQual
       UIStyle
   other-modules:
       Paths_personal_finance

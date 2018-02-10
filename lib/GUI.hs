@@ -40,6 +40,7 @@ import           Data.Default
 import           System.Directory (removeFile)
 import qualified Database.SQLite.Simple as SQL
 
+import UICommon hiding (newEvent)
 import           Config
 import           UIStyle (writeCss)
 import           RIO
@@ -48,13 +49,14 @@ import           Core.Account
 import qualified Service.Account as SvcAcc
 import qualified Impl.ToshlAccount as SvcAcc
 
+import UI.BankTransactions (mkBankEntriesElement)
+import qualified UI.BankTransactions
+
 import           Service.Log (HasLogHandle(..), logDebug)
 import qualified Service.Log as SvcLog
 import qualified Impl.FastLogger as SvcLog
-
-import qualified Service.Bank as SvcBank
+import Service.Bank as SvcBank
 import qualified Impl.BankABNText as SvcBank
-
 
 class HasWindow env where
     currentWindow :: env -> Window
@@ -91,6 +93,13 @@ instance HasAccHandle Env where
 instance HasAccHandle App where
     getAccHandle (App env _) = getAccHandle env
 
+
+instance SvcBank.HasBankHandle Env where
+  getBankHandle env = env^.svcBank
+
+instance SvcBank.HasBankHandle App where
+  getBankHandle (App env _) = SvcBank.getBankHandle env
+
 parseEnvConfig :: IO PartialConfig
 parseEnvConfig = do
     url <- lookupEnv "TOSHL_URL"
@@ -106,7 +115,7 @@ main = do
     tpConfig <- makeThreepennyConfig
     runManaged $ do
         cssPath <- managed $ withTempPath "finance.css"
-        liftIO $ writeCss cssPath
+        liftIO $ writeCss [UI.BankTransactions.css] cssPath
 
         logHandle <- managed $ SvcLog.withHandle
         let jsLogProxy :: C8.ByteString -> IO ()
@@ -203,7 +212,9 @@ reconcillationUI :: RIO App Element
 reconcillationUI = do
     (dateWidget, dateTidings) <- newDateWidget
     toshlEntries <- newToshlEntries (Account "abn" "EUR") dateTidings
-    bankEntries <- newBankEntries
+    bank <- asks getBankHandle
+    log <- asks getLogHandle
+    bankEntries <- liftUI $ mkBankEntriesElement bank log dateTidings
     entryEditor <- expenseEntry
     block "reconcillation" [("date", dateWidget)
                            ,("toshl", toshlEntries)
@@ -318,11 +329,6 @@ showTransaction trn = liftUI $ do
       TrExpense _ -> "expense"
       TrIncome _ -> "income"
       TrTransfer _ -> "transfer"
-
-
-childrenM :: WriteAttr Element [UI Element]
-childrenM = mkWriteAttr $ \i x -> void $ do
-    return x # set children [] #+ i
 
 newToshlEntries :: Account -> Tidings Day -> RIO App Element
 newToshlEntries _acc dayT = do

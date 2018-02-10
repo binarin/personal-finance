@@ -4,11 +4,11 @@ import Clay
 import Data.Text.Lazy (Text)
 import qualified Data.Text.Lazy.IO as T
 
-writeCss :: FilePath -> IO ()
-writeCss path = T.writeFile path css
+writeCss :: [Css] -> FilePath -> IO ()
+writeCss moreCss path = T.writeFile path (css moreCss)
 
-css :: Text
-css = renderWith pretty [] stylesheet
+css :: [Css] -> Text
+css moreCss = renderWith pretty [] (stylesheet >> mapM_ Prelude.id moreCss)
 
 stylesheet :: Css
 stylesheet = do
