@@ -139,7 +139,7 @@ getTransactions acc day = do
     accountId <- resolveAccount acc
     entries :: [ToshlEntry] <- getAll "/entries" [("from", [T.pack $ yyyyMmDd day])
                                                  ,("to", [T.pack $ yyyyMmDd day])
-                                                 ,("account", [serializeId accountId])
+                                                 ,("accounts", [serializeId accountId])
                                                  ]
     mapM unpackTransaction entries
 
