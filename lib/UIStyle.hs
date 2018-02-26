@@ -32,12 +32,13 @@ date = do
 
 transactionDetails :: Css
 transactionDetails = do
-  paddingLeft (em 0.5)
+  paddingRight (em 0.5)
   margin (em 1) (em 1) (em 1) (em 1)
   display grid
   "grid-template-columns" -: "1fr 1fr"
   borderBottom solid (px 3) (lighten 0.4 gray)
-  borderLeft solid (em 2) (lighten 0.4 gray)
+  borderRight solid (em 2) (lighten 0.4 gray)
+  height (em 6)
 
 expense :: Css
 expense = do
@@ -83,19 +84,19 @@ reconcillation :: Css
 reconcillation = do
     ".reconcillation" ? do
         display grid
-        "grid-template-columns" -: "2fr 1fr 2fr"
-    ".reconcillation__toshl" ? do
-        "grid-row" -: "1 / span 2"
-        "grid-column" -: "1"
-    ".reconcillation__bank" ? do
-        "grid-row" -: "1 / span 2"
-        "grid-column" -: "3"
+        "grid-template-columns" -: "1fr 1fr"
     ".reconcillation__date" ? do
         "grid-row" -: "1"
-        "grid-column" -: "2"
-    ".reconcillation__editor" ? do
+        "grid-column" -: "1 / span 2"
+    ".reconcillation__toshl" ? do
+        "grid-row" -: "2"
+        "grid-column" -: "1"
+    ".reconcillation__bank" ? do
         "grid-row" -: "2"
         "grid-column" -: "2"
+    -- ".reconcillation__editor" ? do
+    --     "grid-row" -: "2"
+    --     "grid-column" -: "2"
 
 tags :: Css
 tags = do

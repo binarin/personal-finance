@@ -1,7 +1,11 @@
+{-# LANGUAGE RecordWildCards #-}
 module UI.BankTransactions
   ( module CSS
-  , mkBankEntriesElement
+  , mkBankEntries
+  , BankEntriesWidget(..)
   ) where
+
+import qualified Data.Text as T
 
 import           UICommon
 import qualified UIQual as UI
@@ -12,18 +16,39 @@ import qualified Service.Log as SvcLog
 
 import UI.BankTransactionsCSS as CSS
 
-mkBankEntriesElement :: SvcBank.Handle -> SvcLog.Handle -> Tidings Day -> UI Element
-mkBankEntriesElement bankSvc logSvc dayT = do
+data BankEntriesWidget = BankEntriesWidget
+  { _elementBE :: Element
+  , _selectedBE :: Event BankTrn
+  }
+
+instance Widget BankEntriesWidget where getElement = _elementBE
+
+
+mkBankEntries :: SvcBank.Handle -> SvcLog.Handle -> Tidings Day -> UI BankEntriesWidget
+mkBankEntries bankSvc logSvc dayT = do
   initialDay <- liftIO $ currentValue (facts dayT)
   trns <- SvcBank._getTransactions bankSvc initialDay
   (modifyTrnsEv, modifyTrns) <- liftIO $ newEvent
+  (_selectedBE, selectTrn) <- liftIO $ newEvent
   trnsB <- liftIO $ accumB trns modifyTrnsEv
   void $ onEvent (rumors dayT) $ \newDay -> do
-    newTrns <- liftIO $ SvcBank._getTransactions bankSvc newDay
+    newTrns <- liftIO $ sortTransactions <$> SvcBank._getTransactions bankSvc newDay
     liftIO $ modifyTrns $ const newTrns
     pure ()
-  container <- UI.div
-  element container # sink childrenM (map <$> pure showTransaction <*> trnsB)
+  _elementBE <- UI.div
+  element _elementBE # sink childrenM (map <$> pure (showTransaction selectTrn) <*> trnsB)
+  pure BankEntriesWidget {..}
 
-showTransaction :: BankTrn -> UI Element
-showTransaction _ = UI.string "transaction!"
+
+showTransaction :: UICommon.Handler BankTrn -> BankTrn -> UI Element
+showTransaction selectAction trn = do
+  amountElt <- makeAmountElement (trn^.amount) (fromMaybe "EUR" $ trn^.currency)
+  dateElt <- divWithDate (trn^.day)
+  descElt <- UI.string (T.unpack $ fromMaybe "" $ trn^.description)
+  container <- block "bank-transaction" [("amount", amountElt)
+                                        ,("date", dateElt)
+                                        ,("description", descElt)
+                                        ]
+  on UI.click container $ \_ -> do
+    liftIO $ selectAction trn
+  pure container

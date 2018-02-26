@@ -8,8 +8,8 @@
 {-# LANGUAGE RecursiveDo #-}
 module GUI where
 
+import           Data.List (sortBy)
 import           System.Posix.Env (getEnvDefault)
-import           Numeric (showFFloat)
 import           Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
@@ -40,7 +40,7 @@ import           Data.Default
 import           System.Directory (removeFile)
 import qualified Database.SQLite.Simple as SQL
 
-import UICommon hiding (newEvent)
+import           UICommon hiding (newEvent)
 import           Config
 import           UIStyle (writeCss)
 import           RIO
@@ -49,13 +49,15 @@ import           Core.Account
 import qualified Service.Account as SvcAcc
 import qualified Impl.ToshlAccount as SvcAcc
 
-import UI.BankTransactions (mkBankEntriesElement)
+import           UI.BankTransactions (mkBankEntries, BankEntriesWidget(..))
 import qualified UI.BankTransactions
+import UI.ExpenseEditor (mkExpenseEditor, ExpenseEditorWidget(..))
+import qualified UI.ExpenseEditor
 
 import           Service.Log (HasLogHandle(..), logDebug)
 import qualified Service.Log as SvcLog
 import qualified Impl.FastLogger as SvcLog
-import Service.Bank as SvcBank
+import           Service.Bank as SvcBank
 import qualified Impl.BankABNText as SvcBank
 
 class HasWindow env where
@@ -115,7 +117,9 @@ main = do
     tpConfig <- makeThreepennyConfig
     runManaged $ do
         cssPath <- managed $ withTempPath "finance.css"
-        liftIO $ writeCss [UI.BankTransactions.css] cssPath
+        liftIO $ writeCss [UI.BankTransactions.css
+                          ,UI.ExpenseEditor.css
+                          ] cssPath
 
         logHandle <- managed $ SvcLog.withHandle
         let jsLogProxy :: C8.ByteString -> IO ()
@@ -125,7 +129,7 @@ main = do
 
         sqliteConn <- managed $ SQL.withConnection "db.sqlite"
         homeDir <- liftIO $ getEnvDefault "HOME" "/home/binarin"
-        svcBank <- liftIO $ SvcBank.newHandle logHandle (homeDir <> "/Downloads")
+        svcBank <- liftIO $ SvcBank.newHandle logHandle (homeDir <> "/org/bank-statements")
 
         let env = Env ourConfig cssPath svcAccount logHandle svcBank
         liftIO $ startGUI (tpConfig { jsLog = jsLogProxy }) (setup env)
@@ -198,32 +202,21 @@ column elts = do
 newEvent :: MonadIO m => m (Event a, UI.Handler a)
 newEvent = liftIO $ UI.newEvent
 
-block :: MonadUI m => String -> [(String, Element)] -> m Element
-block blockName namedElements = do
-    container <- liftUI $ UI.div # set UI.class_ blockName
-    wrappedElements <- flip mapM namedElements $ \(elName, elt) -> do
-        wrapper <- liftUI $ UI.div # set UI.class_ (blockName <> "__" <> elName)
-                                   # set children [elt]
-        pure wrapper
-    liftUI $ pure container # set children wrappedElements
-
-
 reconcillationUI :: RIO App Element
 reconcillationUI = do
     (dateWidget, dateTidings) <- newDateWidget
     toshlEntries <- newToshlEntries (Account "abn" "EUR") dateTidings
     bank <- asks getBankHandle
     log <- asks getLogHandle
-    bankEntries <- liftUI $ mkBankEntriesElement bank log dateTidings
-    entryEditor <- expenseEntry
+    bankEntries <- liftUI $ mkBankEntries bank log dateTidings
+    liftUI $ onEvent (_selectedBE bankEntries) $ \trn -> do
+      liftIO $ putStrLn $ show trn
+    entryEditor <- liftUI $ mkExpenseEditor (_selectedBE bankEntries)
     block "reconcillation" [("date", dateWidget)
                            ,("toshl", toshlEntries)
-                           ,("bank", bankEntries)
-                           ,("editor", entryEditor)
+                           ,("bank", getElement bankEntries)
+                           ,("editor", getElement entryEditor)
                            ]
-
-yyyy_mm_dd :: Day -> String
-yyyy_mm_dd = formatTime defaultTimeLocale "%Y-%m-%d"
 
 parseDay :: String -> Day
 parseDay str = maybe (fromGregorian 2011 1 1) id parsed
@@ -254,19 +247,7 @@ newDateWidget = do
 getTransactions :: Account -> Day -> RIO App [Transaction]
 getTransactions acc forDay = do
     svc <- asks getAccHandle
-    liftIO $ SvcAcc.getTransactions svc acc forDay
-
-
-formatExpenseAmount :: Int -> String
-formatExpenseAmount amt = showFFloat (Just 2) ((fromIntegral amt :: Double) / 100) ""
-
-formatCurrency :: Text -> String
-formatCurrency "EUR" = "€"
-formatCurrency "RUB" = "₽"
-formatCurrency other = T.unpack other
-
-
-makeAmountElement amount currency = UI.div #+ [UI.string $ formatExpenseAmount amount <> " " <> formatCurrency currency]
+    liftIO $ sortTransactions <$> SvcAcc.getTransactions svc acc forDay
 
 trnAmountElt :: Transaction -> UI Element
 trnAmountElt (TrExpense exp) = makeAmountElement (- exp^.amount) (exp^.currency)
@@ -280,9 +261,6 @@ trnCategoryElt :: Transaction -> UI Element
 trnCategoryElt (TrExpense exp) = divWithText (exp^.category.name)
 trnCategoryElt (TrIncome inc) = divWithText (inc^.category.name)
 trnCategoryElt (TrTransfer xfr) = divWithText ("-> " <> xfr^.toAccount.name)
-
-divWithDate :: Day -> UI Element
-divWithDate day = UI.string $ yyyy_mm_dd day
 
 trnDateElt :: Transaction -> UI Element
 trnDateElt (TrExpense exp) = divWithDate (exp^.day)
@@ -345,22 +323,6 @@ newToshlEntries _acc dayT = do
     container <- UI.div
     element container # sink childrenM (map <$> pure showTransaction <*> trnsB)
     pure container
-
-newBankEntries :: RIO App Element
-newBankEntries = do
-    liftUI $ UI.string "bank entries"
-
-expenseEntry :: RIO App Element
-expenseEntry = do
-    liftUI $ do
-        dateInput <- UI.input # set UI.type_ "date"
-        amount <- UI.input
-        (buttons, buttonClick) <- radioButtons [("a", 1), ("b", 2)]
-        on UI.valueChange amount $ \val -> liftIO (putStrLn val)
-        onEvent buttonClick $ \val -> liftIO (putStrLn $ show val)
-        container <- column [pure dateInput, pure amount, pure buttons]
-        on keypress container (\k -> liftIO (putStrLn $ show k))
-        pure container
 
 radioButtons :: [(String, a)] -> UI (Element, Event a)
 radioButtons buttons = do

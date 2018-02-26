@@ -2,7 +2,7 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: e06711003c7bf18ebac17ec9d35c74e86a190c946403da6dd769d296635b413a
+-- hash: 0472d409c568fced5c475705c551145d6e34e39c44e3a7e911abf4634eb20f69
 
 name:                personal-finance
 version:             0.1.0.0
@@ -77,6 +77,8 @@ library
       Service.Log
       UI.BankTransactions
       UI.BankTransactionsCSS
+      UI.ExpenseEditor
+      UI.ExpenseEditorCSS
       UICommon
       UILive
       UIQual

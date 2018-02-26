@@ -1,3 +1,4 @@
+{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -6,6 +7,7 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 module Core.Account where
 
+import Data.List (sortBy)
 import Data.Text (Text)
 import Data.Time.Calendar (Day)
 import Control.Lens
@@ -57,9 +59,17 @@ data Transaction = TrExpense Expense
                  | TrTransfer Transfer
   deriving (Show, Eq, Ord)
 
-
 makeFields ''Expense
 makeFields ''Income
 makeFields ''Transfer
 makeFields ''Category
 makeFields ''Tag
+
+instance HasAmount Transaction Int where
+  amount :: Functor f => (Int -> f Int) -> Transaction -> f Transaction
+  amount k (TrExpense exp) = fmap (\newAmount -> TrExpense (exp & amount .~ newAmount)) (k $ exp^.amount)
+  amount k (TrIncome inc) = fmap (\newAmount -> TrIncome (inc & amount .~ newAmount)) (k $ inc^.amount)
+  amount k (TrTransfer xfr) = fmap (\newAmount -> TrTransfer (xfr & amount .~ newAmount)) (k $ xfr^.amount)
+
+sortTransactions :: (HasAmount s a, Ord a) => [s] -> [s]
+sortTransactions = sortBy (\x y -> (x^.amount) `compare` (y^.amount))

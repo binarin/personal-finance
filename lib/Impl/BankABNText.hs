@@ -44,7 +44,7 @@ loadStatements path = do
   files <- listDirectory path
   foldM (getFromFile path) M.empty (filter looksLikeReport files)
   where
-    looksLikeReport file = file =~ ("TXT[0-9]+\\.TAB" :: String)
+    looksLikeReport file = file =~ ("\\.TAB$" :: String)
 
 
 getFromFile :: FilePath -> M.Map Day [BankTrn] -> FilePath -> IO (M.Map Day [BankTrn])
