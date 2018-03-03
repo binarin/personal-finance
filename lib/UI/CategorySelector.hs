@@ -2,6 +2,7 @@
 module UI.CategorySelector
   ( css
   , mkCategorySelector
+  , userSelectedCategory
   ) where
 
 import Data.Aeson as JSON
@@ -45,3 +46,6 @@ renderOption cat = do
   pure opt
 
 properlySelected = fromJQueryProp "checked" (== JSON.Bool False) (JSON.Bool . not)
+
+userSelectedCategory :: CategorySelector -> Tidings (Maybe Category)
+userSelectedCategory = _selectionCS

@@ -6,7 +6,7 @@ module Parser.ABNTab where
 
 import           GHC.Generics
 import           Data.Scientific (Scientific)
-import           Data.Char (ord)
+import           Data.Char (ord, chr)
 import           Data.Vector (Vector, toList)
 import           Data.Text (Text)
 import qualified Data.ByteString.Lazy as BL
@@ -30,7 +30,7 @@ parse content =
                                    , _bankTrnCurrency = Just rowCurrency
                                    , _bankTrnDay = unpackYYYYMMDD rowDate
                                    , _bankTrnAccountNumber = Nothing
-                                   , _bankTrnDescription = Just rowDesc
+                                   , _bankTrnDescription = Just $ T.filter (/= (chr 0)) rowDesc
                                    }
 
 data YYYYMMDD = YYYYMMDD Day deriving (Show)
