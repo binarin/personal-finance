@@ -2,7 +2,7 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 0472d409c568fced5c475705c551145d6e34e39c44e3a7e911abf4634eb20f69
+-- hash: 7a5767a67f008f26b94bd55a045001db516518cf475ebfcc6a19ac9d29b6a9b9
 
 name:                personal-finance
 version:             0.1.0.0
@@ -64,6 +64,7 @@ library
       Config
       Core.Account
       Core.Bank
+      Core.SharedLens
       GUI
       Impl.BankABNText
       Impl.FastLogger
@@ -77,6 +78,8 @@ library
       Service.Log
       UI.BankTransactions
       UI.BankTransactionsCSS
+      UI.CategorySelector
+      UI.CategorySelectorCSS
       UI.ExpenseEditor
       UI.ExpenseEditorCSS
       UICommon

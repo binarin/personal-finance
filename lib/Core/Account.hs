@@ -7,6 +7,7 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 module Core.Account where
 
+import Core.SharedLens
 import Data.List (sortBy)
 import Data.Text (Text)
 import Data.Time.Calendar (Day)

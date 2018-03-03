@@ -7,6 +7,8 @@ import Data.Time.Calendar (Day)
 import Control.Lens
 import Data.ByteString (ByteString)
 
+import Core.SharedLens
+
 newtype DBId a = DBId Text deriving (Eq, Ord, Show)
 
 type StatementName = Text
@@ -32,7 +34,6 @@ data BankTrn = BankTrn
 
 makeFields ''BankStatement
 makeFields ''BankTrn
-
 
 sortTransactions :: (HasAmount s a, Ord a) => [s] -> [s]
 sortTransactions = sortBy (\x y -> (x^.amount) `compare` (y^.amount))

@@ -10,6 +10,7 @@ import qualified Data.Text as T
 import           UICommon
 import qualified UIQual as UI
 
+import Core.SharedLens
 import           Core.Bank
 import qualified Service.Bank as SvcBank
 import qualified Service.Log as SvcLog

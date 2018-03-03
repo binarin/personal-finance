@@ -44,15 +44,19 @@ import           UICommon hiding (newEvent)
 import           Config
 import           UIStyle (writeCss)
 import           RIO
+import           Core.SharedLens
 import           Core.Account
 
+import           Service.Account (getAccHandle, HasAccHandle)
 import qualified Service.Account as SvcAcc
 import qualified Impl.ToshlAccount as SvcAcc
 
-import           UI.BankTransactions (mkBankEntries, BankEntriesWidget(..))
 import qualified UI.BankTransactions
-import UI.ExpenseEditor (mkExpenseEditor, ExpenseEditorWidget(..))
+import           UI.BankTransactions (mkBankEntries, BankEntriesWidget(..))
+import qualified UI.CategorySelector
+import           UI.CategorySelector (mkCategorySelector)
 import qualified UI.ExpenseEditor
+import           UI.ExpenseEditor (mkExpenseEditor, ExpenseEditorWidget(..))
 
 import           Service.Log (HasLogHandle(..), logDebug)
 import qualified Service.Log as SvcLog
@@ -86,9 +90,6 @@ instance HasStylesheet App FilePath where
 instance HasLogHandle App where
     getLogHandle (App env _) = getLogHandle env
 
-class HasAccHandle a where
-    getAccHandle :: a -> SvcAcc.Handle
-
 instance HasAccHandle Env where
     getAccHandle env = env^.svcAcc
 
@@ -119,6 +120,7 @@ main = do
         cssPath <- managed $ withTempPath "finance.css"
         liftIO $ writeCss [UI.BankTransactions.css
                           ,UI.ExpenseEditor.css
+                          ,UI.CategorySelector.css
                           ] cssPath
 
         logHandle <- managed $ SvcLog.withHandle
@@ -208,10 +210,11 @@ reconcillationUI = do
     toshlEntries <- newToshlEntries (Account "abn" "EUR") dateTidings
     bank <- asks getBankHandle
     log <- asks getLogHandle
+    acc <- asks getAccHandle
     bankEntries <- liftUI $ mkBankEntries bank log dateTidings
     liftUI $ onEvent (_selectedBE bankEntries) $ \trn -> do
       liftIO $ putStrLn $ show trn
-    entryEditor <- liftUI $ mkExpenseEditor (_selectedBE bankEntries)
+    entryEditor <- liftUI $ mkExpenseEditor acc (_selectedBE bankEntries)
     block "reconcillation" [("date", dateWidget)
                            ,("toshl", toshlEntries)
                            ,("bank", getElement bankEntries)

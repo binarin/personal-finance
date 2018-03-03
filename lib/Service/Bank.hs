@@ -8,6 +8,7 @@ import Core.Bank as Bank
 import Control.Monad.IO.Class
 import Control.Monad.Reader.Class
 import Data.ByteString (ByteString)
+import Core.SharedLens
 
 identity :: a -> a
 identity = Prelude.id

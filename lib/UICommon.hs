@@ -3,6 +3,7 @@ module UICommon
   , makeAmountElement
   , divWithDate
   , block
+  , bem
   , module UI
   , module Common
   ) where
@@ -35,6 +36,9 @@ makeAmountElement amount currency = UI.div #+ [UI.string $ formatExpenseAmount a
 
 divWithDate :: Day -> UI Element
 divWithDate day = UI.string $ yyyy_mm_dd day
+
+bem :: Widget w => String -> w -> (String, Element)
+bem elementName wdgt = (elementName, getElement wdgt)
 
 block :: MonadUI m => String -> [(String, Element)] -> m Element
 block blockName namedElements = do

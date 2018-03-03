@@ -33,6 +33,7 @@ import           GHC.Generics
 import qualified Network.Wreq as W
 import           Prelude hiding (id)
 
+import Core.SharedLens
 import qualified Service.Account as Svc
 import           Core.Account as Acc
 import           RIO
@@ -132,6 +133,7 @@ newHandle config = do
   runRIO iConfig $ populateCaches
   pure $ Svc.Handle { Svc.insertTransaction = runRIO iConfig . insertTransaction
                     , Svc.getTransactions = \a d -> runRIO iConfig $ getTransactions a d
+                    , Svc.getCategories = \ct -> runRIO iConfig $ getCategories ct
                     }
 
 getTransactions :: Account -> Day -> RIO IConfig [Transaction]
@@ -142,6 +144,12 @@ getTransactions acc day = do
                                                  ,("accounts", [serializeId accountId])
                                                  ]
     mapM unpackTransaction entries
+
+getCategories :: CategoryType -> RIO IConfig [Category]
+getCategories ct = do
+  cats <- view categories >>= liftIO . atomically . readTVar
+  let toshlCats = filter (\cat -> cat^.catType == ct) cats
+  pure $ map (\tc -> Category (tc^.name) (tc^.catType)) toshlCats
 
 unpackTransaction :: ToshlEntry -> RIO IConfig Transaction
 unpackTransaction tEntry
