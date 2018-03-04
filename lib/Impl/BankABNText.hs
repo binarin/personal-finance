@@ -21,6 +21,8 @@ import           Core.Bank
 import           Parser.ABNTab (parse)
 import           RIO
 
+import Core.SharedLens
+
 data IConfig = IConfig { _iConfigLogger :: SvcLog.Handle
                        , _iConfigTransactions :: M.Map Day [BankTrn]
                        }

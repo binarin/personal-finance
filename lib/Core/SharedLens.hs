@@ -7,3 +7,6 @@ class HasAmount s a | s -> a where
 
 class HasDescription s a | s -> a where
   description :: Lens' s a
+
+class HasDay s a | s -> a where
+  day :: Lens' s a

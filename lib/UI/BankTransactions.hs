@@ -28,7 +28,7 @@ instance Widget BankEntriesWidget where getElement = _elementBE
 mkBankEntries :: SvcBank.Handle -> SvcLog.Handle -> Tidings Day -> UI BankEntriesWidget
 mkBankEntries bankSvc logSvc dayT = do
   initialDay <- liftIO $ currentValue (facts dayT)
-  trns <- SvcBank._getTransactions bankSvc initialDay
+  trns <- sortTransactions <$> SvcBank._getTransactions bankSvc initialDay
   (modifyTrnsEv, modifyTrns) <- liftIO $ newEvent
   (_selectedBE, selectTrn) <- liftIO $ newEvent
   trnsB <- liftIO $ accumB trns modifyTrnsEv

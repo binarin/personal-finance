@@ -93,6 +93,7 @@ data CreateEntry = CreateEntry
     , _createEntryAccount :: !(ToshlId ToshlAccount)
     , _createEntryCategory :: !(ToshlId ToshlCategory)
     , _createEntryTags :: ![ToshlId ToshlTag]
+    , _createEntryDescription :: !(Maybe Text)
     }
 
 data ToshlEntryTrn = ToshlEntryTrn
@@ -285,7 +286,7 @@ serializeCreate expense = do
     accountId <- resolveAccount (expense ^. account)
     categoryId <- resolveCategory (expense ^. category)
     tagIds <- resolveTags (expense ^. tags)
-    return $ CreateEntry (formatAmount (negate $ expense^.amount)) (expense ^. currency) (expense ^. day) accountId categoryId tagIds
+    return $ CreateEntry (formatAmount (negate $ expense^.amount)) (expense ^. currency) (expense ^. day) accountId categoryId tagIds (expense^.description)
 
 instance FromJSON ToshlAccount where
     parseJSON = withObject "ToshlAccount" $ \v -> ToshlAccount
@@ -390,14 +391,17 @@ addParams ((n, vs):ps) opts =
     opts & W.param n .~ vs & addParams ps
 
 instance ToJSON CreateEntry where
-    toJSON ce = object [ "amount" J..= (ce^.amount)
-                       , "currency" J..= currencyObj
-                       , "date" J..= yyyy_mm_dd
-                       , "account" J..= (ce^.account)
-                       , "category" J..= (ce^.category)
-                       , "tags" J..= (ce^.tags)
-                       ]
+    toJSON ce = object $ [ "amount" J..= (ce^.amount)
+                         , "currency" J..= currencyObj
+                         , "date" J..= yyyy_mm_dd
+                         , "account" J..= (ce^.account)
+                         , "category" J..= (ce^.category)
+                         , "tags" J..= (ce^.tags)
+                         ] ++ maybeDesc
       where
+        maybeDesc = case ce^.description of
+          Nothing -> []
+          Just desc -> [ "desc" J..= desc ]
         currencyObj = object [ "code" J..= (ce^.currencyCode)]
         yyyy_mm_dd = formatTime defaultTimeLocale "%Y-%m-%d" (ce^.date)
 

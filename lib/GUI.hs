@@ -8,6 +8,7 @@
 {-# LANGUAGE RecursiveDo #-}
 module GUI where
 
+import           Text.Read (readMaybe)
 import           Data.List (sortBy)
 import           System.Posix.Env (getEnvDefault)
 import           Data.Text (Text)
@@ -37,7 +38,7 @@ import           Graphics.UI.Threepenny.JQuery
 import qualified Graphics.UI.Threepenny.Widgets as UI
 import           System.IO.Temp (emptySystemTempFile)
 import           Data.Default
-import           System.Directory (removeFile)
+import           System.Directory (removeFile, doesFileExist)
 import qualified Database.SQLite.Simple as SQL
 
 import           UICommon hiding (newEvent)
@@ -56,7 +57,7 @@ import           UI.BankTransactions (mkBankEntries, BankEntriesWidget(..))
 import qualified UI.CategorySelector
 import           UI.CategorySelector (mkCategorySelector)
 import qualified UI.ExpenseEditor
-import           UI.ExpenseEditor (mkExpenseEditor, ExpenseEditorWidget(..))
+import           UI.ExpenseEditor (mkExpenseEditor, ExpenseEditorWidget(..), transactionsChanged)
 
 import           Service.Log (HasLogHandle(..), logDebug)
 import qualified Service.Log as SvcLog
@@ -207,14 +208,12 @@ newEvent = liftIO $ UI.newEvent
 reconcillationUI :: RIO App Element
 reconcillationUI = do
     (dateWidget, dateTidings) <- newDateWidget
-    toshlEntries <- newToshlEntries (Account "abn" "EUR") dateTidings
     bank <- asks getBankHandle
     log <- asks getLogHandle
     acc <- asks getAccHandle
     bankEntries <- liftUI $ mkBankEntries bank log dateTidings
-    liftUI $ onEvent (_selectedBE bankEntries) $ \trn -> do
-      liftIO $ putStrLn $ show trn
     entryEditor <- liftUI $ mkExpenseEditor acc (_selectedBE bankEntries)
+    toshlEntries <- newToshlEntries (Account "abn" "EUR") dateTidings (transactionsChanged entryEditor)
     block "reconcillation" [("date", dateWidget)
                            ,("toshl", toshlEntries)
                            ,("bank", getElement bankEntries)
@@ -226,9 +225,30 @@ parseDay str = maybe (fromGregorian 2011 1 1) id parsed
   where
     parsed = parseTimeM False defaultTimeLocale "%Y-%m-%d" str
 
+
+loadDefaultTime :: IO Day
+loadDefaultTime = do
+  homeDir <- liftIO $ getEnvDefault "HOME" "/home/binarin"
+  let stateFile = homeDir <> "/.personal-finance-date"
+  doesFileExist stateFile >>= \case
+    False -> defaultDay
+    True -> do
+      content <- readFile stateFile
+      case readMaybe content of
+        Just loaded -> pure loaded
+        Nothing -> defaultDay
+  where
+    defaultDay = (localDay . zonedTimeToLocalTime) <$> liftIO getZonedTime
+
+saveDefaultTime :: Day -> IO ()
+saveDefaultTime dt = do
+  homeDir <- liftIO $ getEnvDefault "HOME" "/home/binarin"
+  let stateFile = homeDir <> "/.personal-finance-date"
+  writeFile stateFile (show dt)
+
 newDateWidget :: RIO App (Element, Tidings Day)
 newDateWidget = do
-    defaultDate <- (localDay . zonedTimeToLocalTime) <$> liftIO getZonedTime
+    defaultDate <- liftIO loadDefaultTime
 
     entry' <- liftUI $ UI.input # set UI.type_ "date"
                                 # set UI.value (yyyy_mm_dd defaultDate)
@@ -242,6 +262,9 @@ newDateWidget = do
     dayBehaviour <- accumB defaultDate combinedEvent
     dayEvents <- accumE defaultDate combinedEvent
     void $ liftUI $ sink UI.value (yyyy_mm_dd <$> dayBehaviour) (pure entry')
+
+    liftUI $ onEvent dayEvents $ \dt ->
+      liftIO $ saveDefaultTime dt
 
     elt <- block "date" [("prev", prevBtn), ("date", entry'), ("next", nextBtn)]
     pure (elt, tidings dayBehaviour dayEvents)
@@ -311,14 +334,16 @@ showTransaction trn = liftUI $ do
       TrIncome _ -> "income"
       TrTransfer _ -> "transfer"
 
-newToshlEntries :: Account -> Tidings Day -> RIO App Element
-newToshlEntries _acc dayT = do
+newToshlEntries :: Account -> Tidings Day -> Event () -> RIO App Element
+newToshlEntries _acc dayT reloadE = do
   initialDay <- liftIO $ currentValue (facts dayT)
   trns <- getTransactions (Account "abn" "EUR") initialDay
   (modifyTrnsEv, modifyTrns) <- liftIO $ newEvent
   trnsB <- liftIO $ accumB trns modifyTrnsEv
   env <- ask
-  liftUI $ onEvent (rumors dayT) $ \newDay -> do
+  currentDayB <- liftUI $ stepper initialDay (rumors dayT)
+  let refreshDayE = currentDayB <@ reloadE
+  liftUI $ onEvent (unionWith const (rumors dayT) refreshDayE) $ \newDay -> do
     trns <- liftIO $ runRIO env $ getTransactions (Account "abn" "EUR") newDay
     liftIO $ modifyTrns $ const trns
     pure ()
