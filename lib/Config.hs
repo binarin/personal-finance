@@ -17,6 +17,7 @@ module Config
 
 import Data.ByteString (ByteString)
 import Data.Monoid (Last(..), (<>))
+import Data.Semigroup ()
 import Data.Default
 import Control.Lens
 
@@ -34,13 +35,15 @@ makeFields ''Config
 instance Default PartialConfig where
   def = PartialConfig mempty mempty
 
+instance Semigroup PartialConfig where
+    (<>) :: PartialConfig -> PartialConfig -> PartialConfig
+    (<>) x y = def & toshlUrl .~ (x^.toshlUrl) <> (y^.toshlUrl)
+                   & toshlToken .~ (x^.toshlToken) <> (y^.toshlToken)
+
 
 instance Monoid PartialConfig where
     mempty = PartialConfig mempty mempty
-
-    mappend :: PartialConfig -> PartialConfig -> PartialConfig
-    mappend x y = def & toshlUrl .~ (x^.toshlUrl) <> (y^.toshlUrl)
-                      & toshlToken .~ (x^.toshlToken) <> (y^.toshlToken)
+    mappend = (<>)
 
 lastToEither :: String -> Last a -> Either String a
 lastToEither errMsg (Last x) = maybe (Left errMsg) Right x
