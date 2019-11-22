@@ -34,26 +34,28 @@ logInfo logImpl = \text -> runRIO logImpl $ LogCS.logInfo text
 newHandle :: SvcLog.Handle -> FilePath -> IO Svc.Handle
 newHandle logImpl reportsDir = do
   logInfo logImpl $ "Loading reports from " <> T.pack reportsDir
-  dayData <- loadStatements reportsDir
+  dayData <- loadStatements logImpl reportsDir
   forM_ (M.keys dayData) $ \whichDay -> do
     logInfo logImpl $ "Got data for " <> T.pack (show whichDay) <> ": " <> T.pack (show $ length $ fromMaybe [] $ M.lookup whichDay dayData)
   pure Svc.Handle { _saveStatement = \_ _ -> pure $ Left "no-op"
                   , _getTransactions = \whichDay -> pure $ fromMaybe [] (M.lookup whichDay dayData)
                   }
 
-loadStatements :: FilePath -> IO (M.Map Day [BankTrn])
-loadStatements path = do
+loadStatements :: SvcLog.Handle -> FilePath -> IO (M.Map Day [BankTrn])
+loadStatements logImpl path = do
   files <- listDirectory path
-  foldM (getFromFile path) M.empty (filter looksLikeReport files)
+  foldM (getFromFile logImpl path) M.empty (filter looksLikeReport files)
   where
     looksLikeReport file = file =~ ("\\.TAB$" :: String)
 
 
-getFromFile :: FilePath -> M.Map Day [BankTrn] -> FilePath -> IO (M.Map Day [BankTrn])
-getFromFile dir perDay path = do
+getFromFile :: SvcLog.Handle -> FilePath -> M.Map Day [BankTrn] -> FilePath -> IO (M.Map Day [BankTrn])
+getFromFile logImpl dir perDay path = do
   content <- BL.readFile $ dir <> "/" <> path
   case parse content of
-    Left _ -> pure perDay
+    Left err -> do
+      logInfo logImpl err
+      pure perDay
     Right rows -> pure $ foldl addRow perDay rows
 
 type PerDay = M.Map Day [BankTrn]
