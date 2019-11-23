@@ -71,6 +71,8 @@ guessCategory BankTrn {_bankTrnDescription = Just desc}
   | desc `match` "HEMA" = c "Дом"
   | desc `match` "Booking.com Bloomhouse" = c "Еда и напитки"
   | desc `match` "WWW.KPN.COM" = c "Связь"
+  | desc `match` "Booking.com Piet Hein" = c "Еда и напитки"
+  | desc `match` "AllSecur" = c "Машина"
   | otherwise = Nothing
   where
     c name = Just $ Category name ExpenseCategory
